@@ -29,6 +29,10 @@ uv run pytest -q             # core-module tests
 
 ## Mine
 
+Either run the scripts below, or use the **Pipeline** tab in the app to trigger a
+live fetch → reclean with streamed progress (nothing pre-downloaded).
+
+
 ```bash
 uv run python 1-mining/fetch_eea_hdv.py --dry-run -v      # print the SQL, fetch nothing
 uv run python 1-mining/fetch_eea_hdv.py            # 2019-2020 -> raw snapshot

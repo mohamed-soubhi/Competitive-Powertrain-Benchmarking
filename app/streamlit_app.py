@@ -10,7 +10,9 @@ the DuckDB store the manifest points at.
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -88,11 +90,113 @@ def manifest_key() -> str:
     return f"{d.get('file', '?')}:{d.get('sha256', '?')[:12]}"
 
 
+# ------------------------------------------------------------------- live pipeline
+FETCH_VEHICLE = ROOT / "1-mining" / "fetch_eea_hdv.py"
+FETCH_VIEWER = ROOT / "1-mining" / "fetch_eea_hdv_viewer.py"
+RECLEAN = ROOT / "2-pipeline" / "reclean.py"
+YEARS_VEHICLE = (2019, 2020)   # -> CO2_HeavyDutyVehicles
+YEARS_VIEWER = (2023,)         # -> HDV_2023_viewer
+
+st.session_state.setdefault("mining", False)
+st.session_state.setdefault("last_run", None)
+
+
+def run_stream(args: list[str]):
+    """Yield stdout+stderr lines from ``python <args>`` run at the repo root."""
+    proc = subprocess.Popen(
+        [sys.executable, *[str(a) for a in args]],
+        cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, bufsize=1,
+    )
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        yield line.rstrip("\n")
+    proc.wait()
+    yield f"__EXIT__ {proc.returncode}"
+
+
+def build_stages(sel: list[int], mine: bool) -> list[tuple[str, list]]:
+    stages: list[tuple[str, list]] = []
+    if mine:
+        v = sorted(set(sel) & set(YEARS_VEHICLE))
+        if v:
+            stages.append((f"Mine {v} — CO2_HeavyDutyVehicles",
+                           [FETCH_VEHICLE, "--years", *[str(y) for y in v]]))
+        if set(sel) & set(YEARS_VIEWER):
+            stages.append(("Mine [2023] — HDV_2023_viewer", [FETCH_VIEWER, "--years", "2023"]))
+    stages.append(("Re-clean + load DuckDB", [RECLEAN]))
+    return stages
+
+
+def execute(stages: list[tuple[str, list]]) -> None:
+    st.session_state.mining = True
+    ok = True
+    try:
+        for label, args in stages:
+            with st.status(label, expanded=True) as status:
+                box, buf, code, t0 = st.empty(), [], 0, time.time()
+                for line in run_stream(args):
+                    if line.startswith("__EXIT__"):
+                        code = int(line.split()[1]); break
+                    buf.append(line)
+                    box.code("\n".join(buf[-400:]) or "…")
+                dt = time.time() - t0
+                if code == 0:
+                    status.update(label=f"✓ {label}  ·  {dt:.0f}s", state="complete")
+                else:
+                    status.update(label=f"✗ {label}  ·  exit {code}", state="error")
+                    ok = False
+                    break
+    finally:
+        st.session_state.mining = False
+        st.session_state.last_run = time.strftime("%Y-%m-%d %H:%M:%S")
+        get_data.clear()
+    if ok:
+        st.success("Pipeline finished — reloading data.")
+        st.rerun()
+    else:
+        st.error("Pipeline stopped on a failed stage. See the log above.")
+
+
+def render_pipeline() -> None:
+    st.subheader("Run the mining pipeline")
+    st.markdown(
+        "Fetches live from **discodata.eea.europa.eu** (EEA HDV CO2 monitoring), "
+        "validates, and rebuilds the local DuckDB store. Nothing here is pre-downloaded."
+    )
+    busy = st.session_state.mining
+    pick = st.multiselect(
+        "Reporting years to mine", [*YEARS_VEHICLE, *YEARS_VIEWER],
+        default=[*YEARS_VEHICLE, *YEARS_VIEWER],
+        help="2019–2020 come from CO2_HeavyDutyVehicles; 2023 from HDV_2023_viewer.",
+    )
+    confirm = st.checkbox(
+        "I understand this sends queries to the EEA Discodata endpoint",
+        disabled=busy,
+    )
+    c1, c2 = st.columns(2)
+    go_mine = c1.button("⛏️  Mine + rebuild", disabled=busy or not confirm or not pick,
+                        width="stretch")
+    go_reclean = c2.button("♻️  Re-clean only (no network)", disabled=busy, width="stretch",
+                           help="Re-validate the existing raw snapshots into DuckDB")
+    if busy:
+        st.info("A run is in progress — this page is busy until it finishes.")
+    if st.session_state.last_run:
+        st.caption(f"Last run this session: {st.session_state.last_run}")
+
+    if go_mine:
+        execute(build_stages(pick, mine=True))
+    elif go_reclean:
+        execute(build_stages(pick, mine=False))
+
+
 # --------------------------------------------------------------------------- load
 try:
     df = get_data(manifest_key())
-except FileNotFoundError as exc:
-    st.error(f"{exc}\n\nRun `python 1-mining/fetch_eea_hdv.py` then `python 2-pipeline/reclean.py`.")
+except FileNotFoundError:
+    st.title("🚛 Competitive Powertrain Benchmarking — EU Heavy-Duty Vehicles")
+    st.warning("No cleaned dataset yet. Run the pipeline below to build it.")
+    render_pipeline()
     st.stop()
 
 # --------------------------------------------------------------------------- sidebar
@@ -139,8 +243,8 @@ if fdf.empty:
     st.warning("No rows match the filters.")
     st.stop()
 
-tab_over, tab_bench, tab_dist, tab_corr, tab_prov = st.tabs(
-    ["Overview", "Benchmark", "Distributions", "Correlations", "Provenance"]
+tab_over, tab_bench, tab_dist, tab_corr, tab_prov, tab_pipe = st.tabs(
+    ["Overview", "Benchmark", "Distributions", "Correlations", "Provenance", "Pipeline"]
 )
 
 # --------------------------------------------------------------------------- overview
@@ -293,3 +397,7 @@ with tab_prov:
         "- **MS_SpecificCO2Emissions** — Member-State-reported, ~3% populated, mixed units — "
         "not modelled."
     )
+
+# --------------------------------------------------------------------------- pipeline
+with tab_pipe:
+    render_pipeline()
