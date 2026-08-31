@@ -303,27 +303,32 @@ with tab_bench:
         st.info(f"`{metric}` has too few values in this selection ({fdf[metric].notna().sum()}). "
                 "Pick another metric or widen the filters.")
     else:
-        rank = metric_by_dimension(fdf, metric, dim, min_count=20)
-        fig = px.bar(rank, x="mean", y=dim, orientation="h", error_x="std",
-                     custom_data=["n", "std"])
-        colors = [CMAP.get(v, T["muted"]) for v in rank[dim]] if dim == "brand" else T["accent"]
-        fig.update_traces(
-            marker_color=colors, cliponaxis=False,
-            text=[f"n={int(v):,}" for v in rank["n"]],
-            textposition="outside", textfont_color=T["muted"],
-            hovertemplate="%{y}<br>mean %{x:.1f}  ·  SD %{customdata[1]:.1f}"
-                          "<br>n=%{customdata[0]:,}<extra></extra>",
+        rank = metric_by_dimension(fdf, metric, dim, min_count=20)   # for order + n
+        keep = list(rank[dim])
+        sub = fdf[fdf[dim].isin(keep)].dropna(subset=[metric])
+        order = list(rank[dim])                                       # ascending mean
+        counts = dict(zip(rank[dim], rank["n"]))
+        fig = px.box(
+            sub, x=metric, y=dim,
+            color=dim if dim == "brand" else None,
+            color_discrete_map=CMAP if dim == "brand" else None,
+            category_orders={dim: order}, points=False,
         )
-        fig.update_yaxes(autorange="reversed")
-        _hi = float((rank["mean"] + rank["std"].fillna(0)).max())
-        fig.update_xaxes(range=[0, _hi * 1.18])   # headroom so the outside n= label never clips
-        st.plotly_chart(bars(styled(fig, title=f"{metric_label} by {dim} — lower is better",
-                                    xaxis_title=metric_label, yaxis_title="", showlegend=False)),
+        if dim != "brand":
+            fig.update_traces(marker_color=T["accent"], line_color=T["accent"])
+        fig.update_traces(
+            hovertemplate="%{y}<br>median %{x:.1f}  ·  Q1 %{q1:.1f}  ·  Q3 %{q3:.1f}<extra></extra>"
+        )
+        fig.update_yaxes(autorange="reversed", ticktext=[f"{b}  (n={counts.get(b, 0):,})" for b in order],
+                         tickvals=order)
+        st.plotly_chart(styled(fig, title=f"{metric_label} by {dim} — lower is better",
+                               xaxis_title=metric_label, yaxis_title="", showlegend=False),
                         width="stretch")
         how_to_read(
-            f"Bar = mean {metric_label}; whisker = ±1 SD. Shortest bar = lowest average CO2. "
-            "Mix matters — an OEM heavy in long-haul tractors (group 5) looks worse; narrow "
-            "the vehicle-group filter for a like-for-like read."
+            f"Box = interquartile range of {metric_label}; line = median; whiskers = 1.5×IQR. "
+            "Left-most (lowest median) OEM leads; box width shows how consistent the range is. "
+            "Mix still matters — an OEM heavy in long-haul tractors (group 5) sits higher; "
+            "narrow the vehicle-group filter for a like-for-like read."
         )
 
         tr = co2_trend(fdf, metric, dim, min_count=20)
