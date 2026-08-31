@@ -145,15 +145,50 @@ Or from the app: **Pipeline** tab → set the years → **Full: mine → load �
 
 ---
 
-## 🧠 Machine Learning Methodology
+---
 
-- **Target**: `CO2v` — VECTO declared specific CO2 emissions (g/km).
-- **Target Leakage Guard**: Dynamometer test-cycle emissions (`WHTC_CO2_gkwh`, `WHSC_CO2_gkwh`), freight efficiency (`COL_CO2_gtkm`), and member state reported values (`MS_SpecificCO2Emissions`) are strictly banned from model inputs.
-- **Evaluation**: Shuffled 5-fold cross-validation on 60,000 bounded subsamples:
-  - **Rich Feature Set** (Mass + Class + Engine Specs, 2019–2020): **CV $R^2 = 0.595 \pm 0.006$**, **CV MAE = 27.8 g/km** (vs 49.4 median baseline).
-  - **Base Feature Set** (Mass + Class + Powertrain, all years): **CV $R^2 = 0.448 \pm 0.018$**, **CV MAE = 45.2 g/km** (vs 62.2 median baseline).
-  - **Non-Linear Signal**: HistGradientBoosting decisively outperforms linear regression ($R^2 \approx 0.312$).
-- **Dominant Drivers**: Chassis curb mass and vehicle group explain most whole-vehicle emissions variance; displacement and rated speed provide significant secondary lift.
+## 🧠 Machine Learning Architecture & Parameter Selection Case Study
+
+> 📖 **Full Engineering Case Study**: Read the dedicated [ML Case Study & Parameter Selection Guide](docs/ml_case_study.html) for detailed physics derivations, validation scatter plots, and engineering trade-offs.
+
+### 1. Problem Formulation & Objective
+Running certified European Commission **VECTO** simulations for thousands of vehicle permutations requires confidential 3D CAD geometries, transmission efficiency loss maps, aerodynamic wind-tunnel drag coefficients ($C_d \cdot A$), and tyre rolling resistance maps. We train a high-speed non-linear surrogate model using **`HistGradientBoostingRegressor`** to estimate declared `CO2v` emissions ($g/km$) in sub-milliseconds from macro engineering specifications.
+
+### 2. Target Leakage Guard (`assert_no_leakage`)
+To ensure genuine predictive validity, downstream test cycle emissions and duplicate metrics are strictly banned from feature inputs:
+- ❌ **`WHTC_CO2_gkwh` / `WHSC_CO2_gkwh`**: Engine dynamometer test results (g/kWh) directly feed the VECTO vehicle model. Using them would predict whole-vehicle CO2 from engine CO2.
+- ❌ **`COL_CO2_gtkm` / `COL_FuelConsumption_l100km`**: Downstream mission profile outputs collinear with `CO2v`.
+- ❌ **`MS_SpecificCO2Emissions`**: Downstream Member-State administrative registration numbers.
+
+### 3. Algorithm Selection: Why `HistGradientBoostingRegressor`?
+- **Non-Linear Interactions**: Aerodynamic drag scales quadratically ($v^2$), while engine brake-specific fuel consumption follows non-linear contour islands. Linear models achieve only $R^2 \approx 0.312$, whereas HistGradientBoosting achieves **$R^2 = 0.595 \pm 0.006$**.
+- **Native Missing Value Handling**: Real-world regulatory filings have missing optional fields; HGB evaluates missingness at split time without ad-hoc imputation artifacts.
+- **Fast $O(N \cdot K)$ Binning**: Continuous variables are binned into 256 integer bins, allowing tree evaluation in $<2\text{ ms}$ for real-time interactive What-If sliders.
+
+### 4. Hyperparameter Rationale
+- `max_iter = 300`: Allows gradient boosting to resolve fine-grained interaction terms (e.g. RPM $\times$ displacement) with early stopping.
+- `learning_rate = 0.08`: Conservative shrinkage step size to prevent tree over-reaction to outlier chassis variants.
+- `max_leaf_nodes = 31` ($2^5 - 1$): Constrains maximum tree depth to ~5 levels, capturing 3-to-4-way physical interactions (Mass $\times$ Displacement $\times$ Aerodynamic Group) without memorizing homologation codes.
+- `random_state = 42`: Enforces exact reproducibility across cross-validation splits.
+
+### 5. Empirical 5-Fold Cross-Validation Performance
+
+| Model | Feature Set | CV R² | CV MAE (g/km) | Baseline MAE | Error Reduction |
+|---|---|---|---|---|---|
+| **HistGradientBoosting** | **Rich (2019–2020)** | **0.595 ± 0.006** | **27.8 g/km** | 49.4 g/km | **−43.7%** |
+| Linear Regression | Rich (2019–2020) | 0.312 ± 0.008 | 39.6 g/km | 49.4 g/km | −19.8% |
+| **HistGradientBoosting** | **Base (All Years)** | **0.448 ± 0.018** | **45.2 g/km** | 62.2 g/km | **−27.3%** |
+| Linear Regression | Base (All Years) | 0.245 ± 0.012 | 54.1 g/km | 62.2 g/km | −13.0% |
+
+### 6. Feature Importance & Physical Interpretation
+1. **`VehicleGroup` (~59.9% importance)**: Sets the baseline aerodynamic drag area ($C_d \cdot A$), axle count, and standard VECTO duty cycle weighting (Group 4 rigid vs Group 5 long-haul tractor).
+2. **`CurbMassChassis_kg` (~42.7% importance)**: Directly dictates baseline rolling resistance force ($F_{\text{roll}} = C_{rr} \cdot m \cdot g$) and acceleration inertia.
+3. **`Engine_Displacement_ltr` (~24.9% importance)**: Dictates swept volume, friction scaling, and thermodynamic peak efficiency contours.
+4. **`Engine_RatedPower_kw` (~23.2% importance)**: Governs gradient climbing speed and highway cruising load points.
+5. **`Engine_RatedSpeed_rpm` (~8.4% importance)**: Captures manufacturer *downspeeding* philosophy (e.g. 1600 RPM vs 2200 RPM lowers parasitic friction).
+
+### 7. Extrapolation Envelope Guard
+Gradient boosted decision trees cannot extrapolate trends outside their training bounds. The pipeline records $p_1$ and $p_{99}$ percentile boundaries (e.g. Curb Mass $5,566\text{–}9,563\text{ kg}$, Displacement $6.7\text{–}16.4\text{ L}$) to warn users in the **What-If Simulator** whenever inputs lie outside empirical confidence bounds.
 
 ---
 

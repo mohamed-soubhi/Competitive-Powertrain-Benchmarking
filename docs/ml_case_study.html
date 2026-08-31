@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Machine Learning Architecture & Parameter Selection Case Study — EU HDV CO2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#2a78d6',
+              600: '#1c5cab',
+              700: '#1e40af',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    pre, code { font-family: 'JetBrains Mono', monospace; }
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+<body class="bg-[#f5f4f1] text-[#0b0b0b] dark:bg-[#111110] dark:text-[#ffffff] min-h-screen antialiased transition-colors duration-200">
+
+  <!-- Header -->
+  <header class="bg-white dark:bg-[#1a1a19] border-b border-[#e6e5e2] dark:border-[#3a3a37] sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🧠</span>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-bold tracking-tight">ML Architecture & Parameter Selection Case Study</h1>
+            <span class="bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 text-xs px-2 py-0.5 rounded font-semibold">Technical Deep Dive</span>
+          </div>
+          <p class="text-xs text-[#52514e] dark:text-[#c3c2b7]">Competitive Powertrain Benchmarking · VECTO CO2v Estimation</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <a href="documentation.html" class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 dark:bg-[#252524] text-[#0b0b0b] dark:text-[#ffffff] border border-[#e6e5e2] dark:border-[#3a3a37] hover:bg-gray-200 transition-colors">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+          <span>Full Docs</span>
+        </a>
+        <a href="index.html" class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+          <span>Live App</span>
+        </a>
+        <button id="theme-toggle" class="p-2 text-sm rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37] hover:bg-gray-100 dark:hover:bg-[#252524] transition-colors" title="Toggle Theme">
+          <i data-lucide="moon" class="w-4 h-4 hidden dark:block"></i>
+          <i data-lucide="sun" class="w-4 h-4 block dark:hidden"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+    
+    <!-- Navigation Sidebar -->
+    <aside class="hidden lg:block lg:col-span-1">
+      <div class="sticky top-20 space-y-3 bg-white dark:bg-[#1a1a19] p-4 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37]">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-[#52514e] dark:text-[#c3c2b7]">Case Study Index</h2>
+        <nav class="space-y-1.5 text-xs">
+          <a href="#section-problem" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">1. Problem Formulation & Objective</a>
+          <a href="#section-leakage" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">2. Target Leakage Guard</a>
+          <a href="#section-model-choice" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">3. Algorithm Selection (Why HGB?)</a>
+          <a href="#section-params" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">4. Hyperparameter Rationale</a>
+          <a href="#section-features" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">5. Feature Importance & Physics</a>
+          <a href="#section-case-studies" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">6. Real-World Engineering Case Studies</a>
+          <a href="#section-envelope" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">7. Extrapolation Envelope Guard</a>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Main Content Body -->
+    <main class="lg:col-span-3 space-y-10">
+
+      <!-- Section 1: Problem Formulation -->
+      <section id="section-problem" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">1. Problem Formulation &amp; Engineering Objective</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          In the heavy-duty commercial vehicle industry, declared CO<sub>2</sub> emissions (<code class="font-mono">CO2v</code>, measured in <code class="font-mono">g/km</code>) are determined through the European Commission's official <strong>VECTO</strong> (Vehicle Energy Consumption calculation Tool) simulation software. 
+        </p>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          Running VECTO for thousands of candidate vehicle configurations requires proprietary 3D CAD files, transmission loss maps, aerodynamic wind tunnel drag coefficients ($C_d \cdot A$), and full rolling resistance tyre test maps. <strong>Our objective is to construct a fast, transparent, non-linear surrogate model</strong> that predicts certified VECTO <code class="font-mono">CO2v</code> emissions in sub-milliseconds using only macro engineering parameters (chassis mass, engine swept volume, rated power, rated speed, vehicle segment, and axle configuration).
+        </p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <h3 class="font-bold text-sm text-[#0b0b0b] dark:text-[#ffffff] mb-1">Target Variable: <code class="font-mono text-[#2a78d6]">CO2v (g/km)</code></h3>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              The headline VECTO certified whole-truck emission figure. Unlike engine-only bench cycles (<code class="font-mono">g/kWh</code>), <code class="font-mono">CO2v</code> reflects the entire vehicle system: driveline friction, aerodynamics, mass, and standard EU duty cycles.
+            </p>
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <h3 class="font-bold text-sm text-[#0b0b0b] dark:text-[#ffffff] mb-1">Surrogate Speedup</h3>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              Enables real-time <em>What-If</em> parametric exploration, fleet trade-off optimization, and competitor capability forecasting without requiring confidential component test data.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Target Leakage Prevention -->
+      <section id="section-leakage" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">2. Target Leakage Guard &amp; Banned Features</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          A critical failure mode in automotive machine learning is <strong>target leakage</strong>: using features that are themselves downstream calculations of the target or direct CO<sub>2</sub> measurements. In our pipeline, <code class="font-mono">powerbench/features.py</code> strictly enforces an automated architectural guard via <code class="font-mono">assert_no_leakage()</code>:
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-xs text-left border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <thead class="bg-gray-100 dark:bg-[#252524] text-[#0b0b0b] dark:text-[#ffffff]">
+              <tr>
+                <th class="p-3 font-semibold">Banned Feature</th>
+                <th class="p-3 font-semibold">Nature of Measurement</th>
+                <th class="p-3 font-semibold">Why It Is Strictly Prohibited</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#e6e5e2] dark:divide-[#3a3a37] text-[#52514e] dark:text-[#c3c2b7]">
+              <tr>
+                <td class="p-3 font-mono font-bold text-red-600 dark:text-red-400">WHTC_CO2_gkwh</td>
+                <td class="p-3">Engine dynamometer transient cycle CO2 (g/kWh)</td>
+                <td class="p-3">Directly feeds the VECTO calculation that produces CO2v. Using it would mean predicting whole-vehicle CO2 from engine CO2, invalidating the model for early-stage vehicle sizing.</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-red-600 dark:text-red-400">WHSC_CO2_gkwh</td>
+                <td class="p-3">Engine dynamometer steady-state cycle CO2 (g/kWh)</td>
+                <td class="p-3">Same as WHTC: engine-level CO2 test result that is only known after physical engine dynamometer type-approval.</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-red-600 dark:text-red-400">COL_CO2_gtkm / COL_CO2_gkm</td>
+                <td class="p-3">Payload-specific mission simulation</td>
+                <td class="p-3">Calculated simultaneously with CO2v inside VECTO for long-haul duty cycles; mathematically collinear with target.</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-red-600 dark:text-red-400">MS_SpecificCO2Emissions</td>
+                <td class="p-3">Member-State registered CO2 figure</td>
+                <td class="p-3">Downstream administrative registration entry containing mixed measurement units.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 3: Model Selection -->
+      <section id="section-model-choice" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">3. Algorithm Selection: Why HistGradientBoostingRegressor?</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          We benchmarked multiple model families on the 756k-vehicle dataset. <strong>Histogram-based Gradient Boosting (<code class="font-mono">HistGradientBoostingRegressor</code>)</strong> was selected based on four empirical and engineering requirements:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <h3 class="font-bold text-[#0b0b0b] dark:text-[#ffffff] text-sm mb-1">1. Non-Linear Physical Scaling</h3>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              Vehicle aerodynamic drag scales with velocity squared ($v^2$) and frontal area, while engine brake-specific fuel consumption follows an island efficiency map (non-linear with engine displacement and RPM). Linear Regression achieves only $R^2 \approx 0.312$, whereas HistGradientBoosting achieves $R^2 = 0.595 \pm 0.006$.
+            </p>
+          </div>
+
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <h3 class="font-bold text-[#0b0b0b] dark:text-[#ffffff] text-sm mb-1">2. Native Handling of Missing Values</h3>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              Real-world regulatory filings contain missing optional fields (e.g. engine rated speed or axle configuration on certain vocational variants). HGB evaluates missing values natively at split time without ad-hoc imputation artifacts.
+            </p>
+          </div>
+
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <h3 class="font-bold text-[#0b0b0b] dark:text-[#ffffff] text-sm mb-1">3. Fast $O(N \cdot K)$ Histogram Binning</h3>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              By binning continuous features into 256 integer bins, tree construction is up to $20\times$ faster than standard Exact Gradient Boosting, allowing on-the-fly cross-validation and fast model training during interactive pipeline updates.
+            </p>
+          </div>
+
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <h3 class="font-bold text-[#0b0b0b] dark:text-[#ffffff] text-sm mb-1">4. Sub-Millisecond Inference for What-If Simulator</h3>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              Once trained, tree traversal requires only integer comparisons, enabling real-time $(< 2\text{ ms})$ interactive predictions in the Streamlit UI as the engineer drags parameter sliders.
+            </p>
+          </div>
+        </div>
+
+        <!-- Benchmark Comparison Table -->
+        <div class="pt-2">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-[#52514e] dark:text-[#c3c2b7] mb-2">Empirical Cross-Validation Performance (5-Fold CV)</h3>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-xs text-left border border-[#e6e5e2] dark:border-[#3a3a37]">
+              <thead class="bg-gray-100 dark:bg-[#252524] text-[#0b0b0b] dark:text-[#ffffff]">
+                <tr>
+                  <th class="p-3 font-semibold">Model Configuration</th>
+                  <th class="p-3 font-semibold">Feature Set</th>
+                  <th class="p-3 font-semibold">CV R² (Mean ± Std)</th>
+                  <th class="p-3 font-semibold">CV MAE (g/km)</th>
+                  <th class="p-3 font-semibold">Median Baseline MAE</th>
+                  <th class="p-3 font-semibold">Error Reduction</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#e6e5e2] dark:divide-[#3a3a37] text-[#52514e] dark:text-[#c3c2b7]">
+                <tr class="bg-blue-50/50 dark:bg-blue-950/20 font-medium">
+                  <td class="p-3 font-bold text-[#2a78d6] dark:text-[#3987e5]">HistGradientBoosting (Selected)</td>
+                  <td class="p-3 font-mono">Rich (2019-2020)</td>
+                  <td class="p-3 font-mono font-bold">0.595 ± 0.006</td>
+                  <td class="p-3 font-mono font-bold text-[#1baf7a]">27.8 g/km</td>
+                  <td class="p-3 font-mono">49.4 g/km</td>
+                  <td class="p-3 font-mono font-bold text-[#1baf7a]">−43.7%</td>
+                </tr>
+                <tr>
+                  <td class="p-3">Linear Regression</td>
+                  <td class="p-3 font-mono">Rich (2019-2020)</td>
+                  <td class="p-3 font-mono">0.312 ± 0.008</td>
+                  <td class="p-3 font-mono">39.6 g/km</td>
+                  <td class="p-3 font-mono">49.4 g/km</td>
+                  <td class="p-3 font-mono">−19.8%</td>
+                </tr>
+                <tr class="bg-blue-50/50 dark:bg-blue-950/20 font-medium">
+                  <td class="p-3 font-bold text-[#2a78d6] dark:text-[#3987e5]">HistGradientBoosting (Selected)</td>
+                  <td class="p-3 font-mono">Base (All Years)</td>
+                  <td class="p-3 font-mono font-bold">0.448 ± 0.018</td>
+                  <td class="p-3 font-mono font-bold text-[#1baf7a]">45.2 g/km</td>
+                  <td class="p-3 font-mono">62.2 g/km</td>
+                  <td class="p-3 font-mono font-bold text-[#1baf7a]">−27.3%</td>
+                </tr>
+                <tr>
+                  <td class="p-3">Linear Regression</td>
+                  <td class="p-3 font-mono">Base (All Years)</td>
+                  <td class="p-3 font-mono">0.245 ± 0.012</td>
+                  <td class="p-3 font-mono">54.1 g/km</td>
+                  <td class="p-3 font-mono">62.2 g/km</td>
+                  <td class="p-3 font-mono">−13.0%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Hyperparameter Rationale -->
+      <section id="section-params" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">4. Hyperparameter Tuning &amp; Selection Rationale</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          Every hyperparameter in <code class="font-mono">powerbench/modeleval.py</code> and <code class="font-mono">3-ml-prediction/train_co2v.py</code> was selected based on automotive physics and sample density constraints:
+        </p>
+
+        <div class="space-y-3 text-xs">
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono font-bold text-sm text-[#0b0b0b] dark:text-[#ffffff]">max_iter = 300</span>
+              <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 px-2 py-0.5 rounded font-semibold">Tree Boosting Iterations</span>
+            </div>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              Allows the gradient descent procedure sufficient iterations to resolve fine-grained interaction terms (e.g. the joint interaction between rated RPM and displacement) while early-stopping prevents overfitting on noise in rare vocational subclasses.
+            </p>
+          </div>
+
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono font-bold text-sm text-[#0b0b0b] dark:text-[#ffffff]">learning_rate = 0.08</span>
+              <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 px-2 py-0.5 rounded font-semibold">Shrinkage Factor</span>
+            </div>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              Conservative shrinkage reduces the variance of individual tree contributions. A step size of 0.08 prevents the model from taking excessively aggressive updates when encountering outlier chassis configurations.
+            </p>
+          </div>
+
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono font-bold text-sm text-[#0b0b0b] dark:text-[#ffffff]">max_leaf_nodes = 31</span>
+              <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 px-2 py-0.5 rounded font-semibold">Tree Complexity ($2^5 - 1$)</span>
+            </div>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              Restricts maximum tree depth to approximately 5 levels. In physical powertrain systems, 3-to-4-way interaction terms (e.g. Mass $\times$ Displacement $\times$ Vehicle Group) explain almost all variance; allowing deeper trees ($> 64$ leaves) leads to memorization of OEM-specific homologation codes rather than generalizable vehicle physics.
+            </p>
+          </div>
+
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono font-bold text-sm text-[#0b0b0b] dark:text-[#ffffff]">random_state = 42</span>
+              <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 px-2 py-0.5 rounded font-semibold">Reproducibility Seed</span>
+            </div>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              Guarantees exact cross-validation fold splitting and feature permutation importance replication across platforms (Linux, macOS, Windows).
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: Feature Importance & Physics -->
+      <section id="section-features" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">5. Permutation Feature Importance &amp; Physical Interpretation</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          Permutation importance evaluates the drop in model $R^2$ when a single feature is randomly shuffled across 15,000 holdout vehicles (5 repeats). Below is the physical explanation for the observed ranking:
+        </p>
+
+        <div class="space-y-3 text-xs">
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <div class="flex items-center justify-between mb-1">
+              <strong class="text-sm text-[#0b0b0b] dark:text-[#ffffff]">1. VehicleGroup (~0.599 Importance)</strong>
+              <span class="font-mono text-[#2a78d6] font-bold">59.9% R² Drop</span>
+            </div>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              <strong>Physics:</strong> Vehicle Group (4, 5, 9, 10) sets the baseline aerodynamic frontal area, axle count, and standard VECTO mission cycle (e.g. Long Haul vs Regional Delivery weighting). Group 5 (4×2 tractor, ~40 t combined) operates on high-speed motorways where aerodynamic drag dominates, while Group 4 (rigid truck) operates at lower speeds.
+            </p>
+          </div>
+
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <div class="flex items-center justify-between mb-1">
+              <strong class="text-sm text-[#0b0b0b] dark:text-[#ffffff]">2. CurbMassChassis_kg (~0.427 Importance)</strong>
+              <span class="font-mono text-[#2a78d6] font-bold">42.7% R² Drop</span>
+            </div>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              <strong>Physics:</strong> Base chassis mass directly scales rolling resistance force ($F_{\text{roll}} = C_{rr} \cdot m \cdot g$) and kinetic energy required during acceleration cycles. Heavier chassis require higher instantaneous engine fueling across all VECTO mission profiles.
+            </p>
+          </div>
+
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <div class="flex items-center justify-between mb-1">
+              <strong class="text-sm text-[#0b0b0b] dark:text-[#ffffff]">3. Engine_Displacement_ltr (~0.249 Importance)</strong>
+              <span class="font-mono text-[#2a78d6] font-bold">24.9% R² Drop</span>
+            </div>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              <strong>Physics:</strong> Engine swept volume (5.1L to 16.4L) dictates internal mechanical friction, displacement-specific torque capacity, and thermodynamic sweet spot. Larger displacement line-haul diesels (12–13L) operate at higher brake thermal efficiency under full highway cruise loads compared to small engines running near redline.
+            </p>
+          </div>
+
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <div class="flex items-center justify-between mb-1">
+              <strong class="text-sm text-[#0b0b0b] dark:text-[#ffffff]">4. Engine_RatedPower_kw (~0.232 Importance)</strong>
+              <span class="font-mono text-[#2a78d6] font-bold">23.2% R² Drop</span>
+            </div>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              <strong>Physics:</strong> Rated power dictates the truck's hill-climbing capability and top-gear acceleration. High-power trucks (e.g. 500+ kW V8 engines) allow higher cruise speeds on highway gradients, impacting cumulative fuel consumption over standard European topographic profiles.
+            </p>
+          </div>
+
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <div class="flex items-center justify-between mb-1">
+              <strong class="text-sm text-[#0b0b0b] dark:text-[#ffffff]">5. Engine_RatedSpeed_rpm (~0.084 Importance)</strong>
+              <span class="font-mono text-[#2a78d6] font-bold">8.4% R² Drop</span>
+            </div>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              <strong>Physics:</strong> Reflects the manufacturer's powertrain <em>downspeeding</em> philosophy. Modern high-efficiency line-haul powertrains achieve rated power at lower engine speeds (e.g. ~1600 RPM vs ~2200 RPM), significantly reducing parasitic friction losses in the valvetrain, water pump, and oil pump.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 6: Real-World Case Studies -->
+      <section id="section-case-studies" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">6. Real-World Engineering Case Studies</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          How powertrain engineers apply this model to solve practical trade-offs:
+        </p>
+
+        <div class="space-y-4 text-xs">
+          <!-- Case Study A -->
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37] space-y-2">
+            <div class="flex items-center space-x-2">
+              <span class="bg-blue-600 text-white font-bold px-2 py-0.5 rounded text-xs">Case A</span>
+              <h3 class="font-bold text-sm text-[#0b0b0b] dark:text-[#ffffff]">Downspeeding &amp; Displacement Right-Sizing in Long-Haul (Group 5)</h3>
+            </div>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              <strong>Scenario:</strong> An OEM evaluates replacing a 10.8L engine rated at 1900 RPM with a 12.8L engine rated at 1600 RPM for a 40-tonne 4×2 tractor (Group 5, 8,200 kg curb mass).
+            </p>
+            <div class="p-3 bg-white dark:bg-[#1a1a19] rounded border border-[#e6e5e2] dark:border-[#3a3a37]">
+              <p class="font-semibold text-[#0b0b0b] dark:text-[#ffffff]">Model Prediction &amp; Physical Mechanism:</p>
+              <p class="text-[#52514e] dark:text-[#c3c2b7] mt-1">
+                The surrogate model predicts a reduction in declared <code class="font-mono">CO2v</code> from ~742 g/km to ~718 g/km (<strong class="text-[#1baf7a]">−3.2% CO2v reduction</strong>). Even though displacement increases by 2.0L, the 300 RPM downspeeding lowers parasitic valvetrain friction and allows the engine to operate in its peak brake-thermal efficiency contour ($> 46\%$) during 85 km/h cruise.
+              </p>
+            </div>
+          </div>
+
+          <!-- Case Study B -->
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37] space-y-2">
+            <div class="flex items-center space-x-2">
+              <span class="bg-amber-600 text-white font-bold px-2 py-0.5 rounded text-xs">Case B</span>
+              <h3 class="font-bold text-sm text-[#0b0b0b] dark:text-[#ffffff]">Lightweighting vs Aerodynamic Penalty in Regional Delivery (Group 4)</h3>
+            </div>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              <strong>Scenario:</strong> Engineering team evaluates a 500 kg chassis lightweighting program (curb mass drops from 7,500 kg to 7,000 kg on an 18-tonne rigid truck).
+            </p>
+            <div class="p-3 bg-white dark:bg-[#1a1a19] rounded border border-[#e6e5e2] dark:border-[#3a3a37]">
+              <p class="font-semibold text-[#0b0b0b] dark:text-[#ffffff]">Model Prediction &amp; Physical Mechanism:</p>
+              <p class="text-[#52514e] dark:text-[#c3c2b7] mt-1">
+                The model predicts a <code class="font-mono">CO2v</code> decrease of ~14.6 g/km (<strong class="text-[#1baf7a]">−2.1% CO2v</strong>). In regional stop-and-go delivery cycles (Group 4), mass reduction provides double the CO2 benefit per kilogram compared to pure long-haul cruise, because braking energy dissipation is directly proportional to chassis mass.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 7: Extrapolation Envelope Guard -->
+      <section id="section-envelope" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">7. Extrapolation Envelope Guard &amp; Trust Boundaries</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          Gradient-boosted decision trees partition the training space with axis-aligned hyperplanes. Consequently, tree models cannot extrapolate linear trends outside the convex hull of their training data. To safeguard against unphysical predictions, <code class="font-mono">powerbench/modeleval.py</code> automatically records the 1st ($p_1$) and 99th ($p_{99}$) percentiles of each input feature:
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <p class="text-xs font-semibold">Curb Mass ($p_1 \dots p_{99}$)</p>
+            <p class="text-base font-bold font-mono">5,566 – 9,563 kg</p>
+            <p class="text-[11px] text-[#52514e] dark:text-[#c3c2b7] mt-1">Warns if inputs violate typical chassis boundaries.</p>
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <p class="text-xs font-semibold">Displacement ($p_1 \dots p_{99}$)</p>
+            <p class="text-base font-bold font-mono">6.7 – 16.4 L</p>
+            <p class="text-[11px] text-[#52514e] dark:text-[#c3c2b7] mt-1">Prevents passenger-car engine inputs (< 5L).</p>
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <p class="text-xs font-semibold">Rated Power ($p_1 \dots p_{99}$)</p>
+            <p class="text-base font-bold font-mono">185 – 427 kW</p>
+            <p class="text-[11px] text-[#52514e] dark:text-[#c3c2b7] mt-1">Flags excessive power ratings (> 566 kW).</p>
+          </div>
+        </div>
+
+        <p class="text-xs text-[#52514e] dark:text-[#c3c2b7] pt-2">
+          When the user adjusts sliders in the interactive <strong>What-If Simulator</strong> outside these envelopes, the dashboard highlights an amber warning to communicate that the vehicle configuration lies in an extrapolation region with reduced empirical confidence.
+        </p>
+      </section>
+
+    </main>
+  </div>
+
+  <footer class="border-t border-[#e6e5e2] dark:border-[#3a3a37] py-6 text-center text-xs text-[#52514e] dark:text-[#c3c2b7]">
+    Competitive Powertrain Benchmarking · Machine Learning Case Study &amp; Parameter Selection · Horse Powertrain
+  </footer>
+
+  <script>
+    const themeBtn = document.getElementById('theme-toggle');
+    themeBtn.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+    });
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

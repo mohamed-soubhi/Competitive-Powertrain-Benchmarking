@@ -625,6 +625,133 @@ with tab_prov:
     )
 
 # --------------------------------------------------------------------------- pipeline
+def render_ml_set(setname: str, S: dict) -> None:
+    H, L = S["models"]["HistGradientBoosting"], S["models"]["Linear"]
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("CV R²", f"{H['kfold_r2_mean']:.3f}", f"±{H['kfold_r2_std']:.3f}", delta_color="off")
+    c2.metric("CV MAE (g/km)", f"{H['kfold_mae']:.1f}")
+    c3.metric("median-baseline MAE", f"{H['baseline_mae']:.1f}")
+    c4.metric("naive R² (train=test)", f"{H['naive_r2']:.3f}")
+    how_to_read(
+        "CV = shuffled 5-fold, scored out-of-fold on a 60k subsample. 'naive' is "
+        "train-on-test, kept only to show the optimism gap. A useful model beats the "
+        "median-baseline MAE."
+    )
+
+    comp = pd.DataFrame({
+        "model": ["HistGradientBoosting", "Linear", "predict median"],
+        "MAE": [H["kfold_mae"], L["kfold_mae"], H["baseline_mae"]],
+    })
+    fig = px.bar(comp, x="MAE", y="model", orientation="h", text="MAE")
+    fig.update_traces(marker_color=[T["accent"], T["muted"], T["bad"]],
+                      texttemplate="%{text:.1f}", textposition="outside",
+                      textfont_color=T["text"], cliponaxis=False)
+    fig.update_yaxes(autorange="reversed")
+    st.plotly_chart(bars(styled(fig, title="Mean absolute error — lower is better",
+                                xaxis_title="g/km", yaxis_title="", showlegend=False)),
+                    width="stretch")
+
+    a_, o_ = S["scatter"]["actual"], S["scatter"]["oof"]
+    lo, hi = min(a_ + o_), max(a_ + o_)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=[lo, hi], y=[lo, hi], mode="lines",
+                             line={"dash": "dash", "color": T["muted"]}, name="perfect"))
+    fig.add_trace(go.Scatter(x=a_, y=o_, mode="markers", name="vehicle",
+                             marker={"size": 5, "color": T["accent"], "opacity": 0.35}))
+    st.plotly_chart(styled(fig, title="Actual vs out-of-fold predicted CO2v",
+                           xaxis_title="actual g/km", yaxis_title="predicted g/km"),
+                    width="stretch")
+    how_to_read(
+        "Each dot is a held-out vehicle. Tight to the dashed line = accurate. Vertical "
+        "spread at a given actual is error from things the model can't see — aero, tyres, "
+        "gearbox, auxiliaries."
+    )
+
+    imp = pd.DataFrame(S["importance"]).sort_values("importance_mean")
+    fig = px.bar(imp, x="importance_mean", y="feature", orientation="h",
+                 error_x="importance_std")
+    fig.update_traces(marker_color=T["accent"])
+    st.plotly_chart(bars(styled(fig, title="Permutation importance (drop in CV R² when shuffled)",
+                                xaxis_title="Δ R²", yaxis_title="", showlegend=False, height=460)),
+                    width="stretch")
+    how_to_read(
+        "How far CV R² falls when one feature is randomly shuffled. Curb mass and vehicle "
+        "group carry most of it; engine size adds a lot in the rich set. "
+        "`Engine_FuelType_nan` mostly marks 2023 rows — a mild year proxy, noted not hidden."
+    )
+
+    st.subheader("What-if — predict CO2v for a hypothetical vehicle")
+    bundle = whatif_model(setname, manifest_key())
+    if bundle is None:
+        st.info("Could not fit the what-if model — is the dataset loaded?")
+    else:
+        env = bundle["envelope"]
+        k = setname  # widget-key prefix — render_ml_set runs once per feature set
+        cL, cR = st.columns(2)
+        raw: dict = {}
+        with cL:
+            raw["GrossVehicleMass_t"] = st.slider("GVW (t)", 3.0, 60.0, 26.0, 0.5, key=f"{k}_gvw")
+            raw["CurbMassChassis_kg"] = st.slider("Curb mass (kg)", 2000, 18000, 7800, 100,
+                                                  key=f"{k}_curb")
+            raw["VehicleGroup"] = st.selectbox("Vehicle group", [4, 5, 9, 10], index=1,
+                                               key=f"{k}_grp")
+            raw["powertrain_class"] = st.selectbox(
+                "Powertrain", list(POWERTRAIN_CLASSES),
+                index=list(POWERTRAIN_CLASSES).index("Diesel ICE"), key=f"{k}_pt")
+        with cR:
+            if setname == "rich":
+                raw["Engine_RatedPower_kw"] = st.slider("Engine power (kW)", 115, 570, 330, 5,
+                                                        key=f"{k}_pwr")
+                raw["Engine_Displacement_ltr"] = st.slider("Displacement (L)", 3.0, 16.5, 12.5, 0.1,
+                                                           key=f"{k}_disp")
+                raw["Engine_RatedSpeed_rpm"] = st.slider("Rated speed (rpm)", 1500, 2900, 1800, 25,
+                                                         key=f"{k}_rpm")
+                raw["AxleConfiguration"] = st.selectbox("Axle config", ["4x2", "6x2", "6x4", "8x4"],
+                                                        key=f"{k}_axle")
+            else:
+                st.caption("Switch to the **rich** set for engine-level inputs.")
+        X1 = whatif_vector(bundle, raw)
+        pred = float(bundle["model"].predict(X1.to_numpy(float))[0])
+        mae = float(bundle.get("cv_mae", H["kfold_mae"]))
+        st.metric("Predicted CO2v", f"{pred:.0f} g/km", help=f"±{mae:.0f} g/km typical CV error")
+        oob = [k for k in ("GrossVehicleMass_t", "CurbMassChassis_kg", "Engine_RatedPower_kw",
+                           "Engine_Displacement_ltr", "Engine_RatedSpeed_rpm")
+               if k in raw and k in env and not (env[k]["min"] <= raw[k] <= env[k]["max"])]
+        if oob:
+            st.warning("Outside the training range for: " + ", ".join(oob)
+                       + " — this is extrapolation, treat as illustrative only.")
+        st.caption("Illustrative. The model sees only these inputs — real CO2v also "
+                   "depends on aerodynamics, tyres, gearbox and auxiliaries.")
+
+    with st.expander("📖 Deep-Dive: Machine Learning Case Study & Parameter Selection Rationale", expanded=False):
+        ML_CASE_STUDY_PATH = ROOT / "docs" / "ml_case_study.html"
+        c_left, c_right = st.columns([1, 2])
+        if ML_CASE_STUDY_PATH.exists():
+            with c_left:
+                st.download_button(
+                    "📥 Download ML Case Study (.html)",
+                    data=ML_CASE_STUDY_PATH.read_bytes(),
+                    file_name="ml_models_case_study.html",
+                    mime="text/html",
+                    width="stretch",
+                )
+            with c_right:
+                st.link_button(
+                    "🌐 Open ML Case Study Online",
+                    "https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/ml_case_study.html",
+                    width="stretch",
+                )
+        st.markdown(
+            "### Why HistGradientBoostingRegressor?\n"
+            "- **Non-Linear Interactions:** Aerodynamic drag ($v^2$) and engine thermal efficiency islands cannot be modeled with linear coefficients ($R^2=0.312$ linear vs $0.595$ HGB).\n"
+            "- **Zero Target Leakage:** Dynamometer cycle emissions (`WHTC`, `WHSC` in g/kWh) and freight efficiencies (`COL_CO2_gtkm`) are strictly banned by `assert_no_leakage()`.\n"
+            "- **Hyperparameters:** `max_iter=300`, `learning_rate=0.08`, `max_leaf_nodes=31` ($2^5-1$). Prevents memorization of OEM homologation codes while capturing 3-way interactions (Mass $\times$ Displacement $\times$ Vehicle Group).\n"
+            "- **Feature Impact:** Chassis curb mass and vehicle group explain ~60% of variance; engine displacement and rated speed (downspeeding) provide significant secondary lift.\n"
+            "- **Extrapolation Safeguard:** Training envelope percentiles ($p_1, p_{99}$) warn engineers when slider inputs leave empirical boundaries."
+        )
+
+
 with tab_pipe:
     render_pipeline()
 
@@ -667,102 +794,12 @@ with tab_docs:
 with tab_ml:
     _rep = load_ml_report()
     if _rep is None:
-        st.info("No trained model yet. Run `python 3-ml-prediction/train_co2v.py`.")
+        st.info("No trained model yet. Run `python 3-ml-prediction/train_co2v.py` (or the Pipeline tab).")
     else:
-        st.caption(f"Target: **CO2v** (VECTO declared g/km). Trained {_rep['written_at']}.")
-        setname = st.radio(
-            "Feature set", ["base", "rich"], horizontal=True,
-            format_func=lambda t: {"base": "base — mass + class + powertrain (all years)",
-                                   "rich": "rich — + engine ratings (2019–2020)"}[t],
-        )
-        S = _rep["sets"][setname]
-        H, L = S["models"]["HistGradientBoosting"], S["models"]["Linear"]
-
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("CV R²", f"{H['kfold_r2_mean']:.3f}", f"±{H['kfold_r2_std']:.3f}", delta_color="off")
-        c2.metric("CV MAE (g/km)", f"{H['kfold_mae']:.1f}")
-        c3.metric("median-baseline MAE", f"{H['baseline_mae']:.1f}")
-        c4.metric("naive R² (train=test)", f"{H['naive_r2']:.3f}")
-        how_to_read(
-            "CV = shuffled 5-fold, scored out-of-fold on a 60k subsample. 'naive' is "
-            "train-on-test, kept only to show the optimism gap. A useful model beats the "
-            "median-baseline MAE."
-        )
-
-        comp = pd.DataFrame({
-            "model": ["HistGradientBoosting", "Linear", "predict median"],
-            "MAE": [H["kfold_mae"], L["kfold_mae"], H["baseline_mae"]],
-        })
-        fig = px.bar(comp, x="MAE", y="model", orientation="h", text="MAE")
-        fig.update_traces(marker_color=[T["accent"], T["muted"], T["bad"]],
-                          texttemplate="%{text:.1f}", textposition="outside",
-                          textfont_color=T["text"], cliponaxis=False)
-        fig.update_yaxes(autorange="reversed")
-        st.plotly_chart(bars(styled(fig, title="Mean absolute error — lower is better",
-                                    xaxis_title="g/km", yaxis_title="", showlegend=False)),
-                        width="stretch")
-
-        a_, o_ = S["scatter"]["actual"], S["scatter"]["oof"]
-        lo, hi = min(a_ + o_), max(a_ + o_)
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=[lo, hi], y=[lo, hi], mode="lines",
-                                 line={"dash": "dash", "color": T["muted"]}, name="perfect"))
-        fig.add_trace(go.Scatter(x=a_, y=o_, mode="markers", name="vehicle",
-                                 marker={"size": 5, "color": T["accent"], "opacity": 0.35}))
-        st.plotly_chart(styled(fig, title="Actual vs out-of-fold predicted CO2v",
-                               xaxis_title="actual g/km", yaxis_title="predicted g/km"),
-                        width="stretch")
-        how_to_read(
-            "Each dot is a held-out vehicle. Tight to the dashed line = accurate. Vertical "
-            "spread at a given actual is error from things the model can't see — aero, tyres, "
-            "gearbox, auxiliaries."
-        )
-
-        imp = pd.DataFrame(S["importance"]).sort_values("importance_mean")
-        fig = px.bar(imp, x="importance_mean", y="feature", orientation="h",
-                     error_x="importance_std")
-        fig.update_traces(marker_color=T["accent"])
-        st.plotly_chart(bars(styled(fig, title="Permutation importance (drop in CV R² when shuffled)",
-                                    xaxis_title="Δ R²", yaxis_title="", showlegend=False, height=460)),
-                        width="stretch")
-        how_to_read(
-            "How far CV R² falls when one feature is randomly shuffled. Curb mass and vehicle "
-            "group carry most of it; engine size adds a lot in the rich set. "
-            "`Engine_FuelType_nan` mostly marks 2023 rows — a mild year proxy, noted not hidden."
-        )
-
-        st.subheader("What-if — predict CO2v for a hypothetical vehicle")
-        bundle = whatif_model(setname, manifest_key())
-        if bundle is None:
-            st.info("Could not fit the what-if model — is the dataset loaded?")
-        else:
-            env = bundle["envelope"]
-            cL, cR = st.columns(2)
-            raw: dict = {}
-            with cL:
-                raw["GrossVehicleMass_t"] = st.slider("GVW (t)", 3.0, 60.0, 26.0, 0.5)
-                raw["CurbMassChassis_kg"] = st.slider("Curb mass (kg)", 2000, 18000, 7800, 100)
-                raw["VehicleGroup"] = st.selectbox("Vehicle group", [4, 5, 9, 10], index=1)
-                raw["powertrain_class"] = st.selectbox(
-                    "Powertrain", list(POWERTRAIN_CLASSES),
-                    index=list(POWERTRAIN_CLASSES).index("Diesel ICE"))
-            with cR:
-                if setname == "rich":
-                    raw["Engine_RatedPower_kw"] = st.slider("Engine power (kW)", 115, 570, 330, 5)
-                    raw["Engine_Displacement_ltr"] = st.slider("Displacement (L)", 3.0, 16.5, 12.5, 0.1)
-                    raw["Engine_RatedSpeed_rpm"] = st.slider("Rated speed (rpm)", 1500, 2900, 1800, 25)
-                    raw["AxleConfiguration"] = st.selectbox("Axle config", ["4x2", "6x2", "6x4", "8x4"])
-                else:
-                    st.caption("Switch to the **rich** set for engine-level inputs.")
-            X1 = whatif_vector(bundle, raw)
-            pred = float(bundle["model"].predict(X1.to_numpy(float))[0])
-            mae = float(bundle.get("cv_mae", H["kfold_mae"]))
-            st.metric("Predicted CO2v", f"{pred:.0f} g/km", help=f"±{mae:.0f} g/km typical CV error")
-            oob = [k for k in ("GrossVehicleMass_t", "CurbMassChassis_kg", "Engine_RatedPower_kw",
-                               "Engine_Displacement_ltr", "Engine_RatedSpeed_rpm")
-                   if k in raw and k in env and not (env[k]["min"] <= raw[k] <= env[k]["max"])]
-            if oob:
-                st.warning("Outside the training range for: " + ", ".join(oob)
-                           + " — this is extrapolation, treat as illustrative only.")
-            st.caption("Illustrative. The model sees only these inputs — real CO2v also "
-                       "depends on aerodynamics, tyres, gearbox and auxiliaries.")
+        st.caption(f"Target: **CO2v** (VECTO declared g/km). Both feature sets are trained together by `train_co2v.py`; results shown below. Trained {_rep['written_at']}.")
+        _SETS = {"base": "base — mass + class + powertrain (all years)",
+                 "rich": "rich — + engine ratings (2019–2020)"}
+        _mlt = dict(zip(_SETS, st.tabs(list(_SETS.values()))))
+        for setname, _tab in _mlt.items():
+            with _tab:
+                render_ml_set(setname, _rep['sets'][setname])
