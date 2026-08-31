@@ -240,15 +240,20 @@ def run_stream(args: list[str]):
     yield f"__EXIT__ {proc.returncode}"
 
 
-def build_stages(sel: list[int], mine: bool, train: bool = True) -> list[tuple[str, list]]:
+def build_stages(
+    sel: list[int], mine: bool, train: bool = True, extra_years: list[int] | None = None
+) -> list[tuple[str, list]]:
     stages: list[tuple[str, list]] = []
     if mine:
         v = sorted(set(sel) & set(YEARS_VEHICLE))
         if v:
             stages.append((f"1 · Mine {v} — CO2_HeavyDutyVehicles",
                            [FETCH_VEHICLE, "--years", *[str(y) for y in v]]))
-        if set(sel) & set(YEARS_VIEWER):
-            stages.append(("1 · Mine [2023] — HDV_2023_viewer", [FETCH_VIEWER, "--years", "2023"]))
+        # 2023 and any extra year the user typed -> the per-year viewer miner
+        vw = sorted((set(sel) & set(YEARS_VIEWER)) | set(extra_years or []))
+        if vw:
+            stages.append((f"1 · Mine {vw} — HDV_<year>_viewer",
+                           [FETCH_VIEWER, "--years", *[str(y) for y in vw]]))
     stages.append(("2 · Validate + load DuckDB", [RECLEAN]))
     if train:
         stages.append(("3 · Train CO2v models (~90 s)", [TRAIN_ML]))
@@ -290,49 +295,65 @@ def execute(stages: list[tuple[str, list]]) -> None:
 def render_pipeline() -> None:
     st.subheader("Run the mining pipeline")
     st.markdown(
-        "Fetches live from **discodata.eea.europa.eu** (EEA HDV CO2 monitoring), "
-        "validates, and rebuilds the local DuckDB store. Nothing here is pre-downloaded."
+        "Each ⛏️ button fetches **live from discodata.eea.europa.eu**, then validates, "
+        "reloads DuckDB and retrains. `reclean.py` merges every raw snapshot on disk, so "
+        "mining one period keeps the others. Nothing is pre-downloaded."
     )
     busy = st.session_state.mining
 
     _m = read_manifest() or {}
     _hdv = _m.get("datasets", {}).get("hdv", {})
     _ml = load_ml_report() or {}
-    s1, s2 = st.columns(2)
-    s1.metric("Dataset rows", f"{_hdv.get('rows', 0):,}",
-              help=f"from {', '.join(x['file'] for x in _hdv.get('source_snapshots', [])) or '—'}")
-    s2.metric("Model trained", (_ml.get("written_at") or "—").replace("T", " ").rstrip("Z"))
-    st.caption(f"Manifest written {_m.get('written_at', '—')}")
+    s1, s2, s3 = st.columns(3)
+    s1.metric("Dataset rows", f"{_hdv.get('rows', 0):,}")
+    s2.metric("Source snapshots", len(_hdv.get("source_snapshots", [])))
+    s3.metric("Model trained", (_ml.get("written_at") or "—").replace("T", " ").rstrip("Z"))
+    st.caption(
+        "active: " + (", ".join(x["file"] for x in _hdv.get("source_snapshots", [])) or "none")
+        + f"  ·  manifest {_m.get('written_at', '—')}"
+    )
 
-    st.markdown("**Stages:** ① mine (live EEA Discodata) → ② validate + load DuckDB → ③ train CO2v models")
-    pick = st.multiselect(
-        "Reporting years to mine", [*YEARS_VEHICLE, *YEARS_VIEWER],
-        default=[*YEARS_VEHICLE, *YEARS_VIEWER],
-        help="2019–2020 come from CO2_HeavyDutyVehicles; 2023 from HDV_2023_viewer.",
-    )
-    train = st.checkbox("Retrain the CO2v models after loading", value=True, disabled=busy,
-                        help="Adds ~90 s. Off = rebuild the dataset only.")
-    confirm = st.checkbox(
-        "I understand this sends queries to the EEA Discodata endpoint", disabled=busy,
-    )
-    c1, c2, c3 = st.columns(3)
-    go_mine = c1.button("⛏️  Full: mine → load → train", disabled=busy or not confirm or not pick,
-                        width="stretch")
-    go_reclean = c2.button("♻️  Re-load + train (no network)", disabled=busy, width="stretch",
-                           help="Re-validate the existing raw snapshots, then train")
-    go_train = c3.button("🧠  Train models only", disabled=busy, width="stretch",
-                         help="Re-run 3-ml-prediction/train_co2v.py on the current dataset")
+    skip_train = st.checkbox("Skip retraining (dataset only)", value=False, disabled=busy)
+    confirm = st.checkbox("I understand mining sends queries to the EEA Discodata endpoint",
+                          disabled=busy)
     if busy:
         st.info("A run is in progress — this page is busy until it finishes.")
     if st.session_state.last_run:
         st.caption(f"Last run this session: {st.session_state.last_run}")
+    _t = not skip_train
+    _net_off = busy or not confirm
 
-    if go_mine:
-        execute(build_stages(pick, mine=True, train=train))
+    st.markdown("**Mine a reporting period**  →  validate → load → train")
+    m1, m2, m3 = st.columns(3)
+    go_1920 = m1.button("⛏️ 2019–2020", disabled=_net_off, width="stretch",
+                        help="CO2_HeavyDutyVehicles — full VECTO detail")
+    go_2023 = m2.button("⛏️ 2023", disabled=_net_off, width="stretch",
+                        help="HDV_2023_viewer — CO2v + country, no engine ratings")
+    with m3:
+        yr = st.number_input("newer year", 2024, 2035, 2024, 1, disabled=busy,
+                             label_visibility="collapsed")
+        go_new = st.button(f"⛏️ {int(yr)}", disabled=_net_off, width="stretch",
+                           help=f"HDV_{int(yr)}_viewer — works once EEA publishes it, "
+                                "otherwise the stage errors and stops")
+
+    f1, f2, f3 = st.columns(3)
+    go_full = f1.button("🔁 Full rebuild (all years)", disabled=_net_off, width="stretch")
+    go_reload = f2.button("♻️ Re-load + train (offline)", disabled=busy, width="stretch",
+                          help="Re-validate the snapshots already on disk")
+    go_train = f3.button("🧠 Train models only", disabled=busy, width="stretch")
+
+    if go_1920:
+        execute(build_stages([2019, 2020], mine=True, train=_t))
+    elif go_2023:
+        execute(build_stages([2023], mine=True, train=_t))
+    elif go_new:
+        execute(build_stages([], mine=True, train=_t, extra_years=[int(yr)]))
+    elif go_full:
+        execute(build_stages([2019, 2020, 2023], mine=True, train=_t))
+    elif go_reload:
+        execute(build_stages([], mine=False, train=_t))
     elif go_train:
         execute([("3 · Train CO2v models (~90 s)", [TRAIN_ML])])
-    elif go_reclean:
-        execute(build_stages(pick, mine=False, train=train))
 
 
 # --------------------------------------------------------------------------- load

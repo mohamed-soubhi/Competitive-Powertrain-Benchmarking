@@ -34,7 +34,7 @@ def test_full_all_years():
     st = build_stages([2019, 2020, 2023], mine=True, train=True)
     labels = [s[0] for s in st]
     assert any("CO2_HeavyDutyVehicles" in x for x in labels)
-    assert any("HDV_2023_viewer" in x for x in labels)
+    assert any("viewer" in x for x in labels)
     assert st[0][1] == ["F_V", "--years", "2019", "2020"]
     assert [s[1] for s in st][-2:] == [["RC"], ["ML"]]
 
@@ -48,3 +48,14 @@ def test_mine_only_2019_with_train():
     st = build_stages([2019], mine=True, train=True)
     assert st[0][1] == ["F_V", "--years", "2019"]
     assert [s[1] for s in st] == [["F_V", "--years", "2019"], ["RC"], ["ML"]]
+
+
+def test_extra_year_routes_through_viewer():
+    st = build_stages([2023], mine=True, train=False, extra_years=[2024])
+    vw = [x for x in st if "HDV_<year>_viewer" in x[0]]
+    assert vw and vw[0][1] == ["F_VW", "--years", "2023", "2024"]
+
+
+def test_extra_year_only_no_base():
+    st = build_stages([], mine=True, train=False, extra_years=[2024])
+    assert [x[1] for x in st] == [["F_VW", "--years", "2024"], ["RC"]]
