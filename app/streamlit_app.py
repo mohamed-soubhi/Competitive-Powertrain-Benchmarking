@@ -34,7 +34,9 @@ from powerbench.benchmark import (  # noqa: E402
     numeric_correlations,
 )
 from powerbench.dataio import load_hdv, provenance_line, read_manifest  # noqa: E402
+from powerbench.oem import POWERTRAIN_CLASSES  # noqa: E402
 from powerbench.theme import (  # noqa: E402
+    BRAND_ORDER,
     app_css,
     brand_color_map,
     corr_kw,
@@ -375,15 +377,18 @@ with tab_dist:
         "fleet; the split view is a per-OEM box (median line, IQR box) ordered by median. "
         "Long right tails on power / displacement are the heavy long-haul tractors."
     )
+    _brand_order = [b for b in BRAND_ORDER if b in set(fdf["brand"])]
+    _pt_order = [p for p in POWERTRAIN_CLASSES if p in set(fdf["powertrain_class"])]
     for field in num_cols:
         if split:
             fig = px.box(fdf.dropna(subset=[field]), x="brand", y=field, color="brand",
-                         color_discrete_map=CMAP, points=False)
-            fig.update_xaxes(categoryorder="median ascending")
+                         color_discrete_map=CMAP, points=False,
+                         category_orders={"brand": _brand_order})
             show_legend = False
         else:
             fig = px.histogram(fdf.dropna(subset=[field]), x=field, nbins=60,
-                               color="powertrain_class")
+                               color="powertrain_class",
+                               category_orders={"powertrain_class": _pt_order})
             fig.update_traces(marker_line_width=0)
             show_legend = True
         st.plotly_chart(
