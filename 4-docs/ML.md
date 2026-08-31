@@ -33,7 +33,7 @@ that produces `CO2v`** — using it would be predicting CO2 from CO2.
 
 ## Honest evaluation
 
-n is ~10^5–10^6, so Leave-One-Out (the LUZA-kit default) is dropped. Instead:
+n is ~10^5–10^6, so Leave-One-Out (the reusable kit's default) is dropped. Instead:
 
 - **Headline:** shuffled 5-fold cross-validation, scored **out-of-fold**, on a
   bounded 60 000-row random subsample (for speed).

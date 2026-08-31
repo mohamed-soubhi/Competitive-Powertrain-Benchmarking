@@ -1,6 +1,6 @@
 # 🚛 Competitive Powertrain Benchmarking Dashboard
 
-EU heavy-duty vehicle (truck/bus) powertrain benchmarking and CO2 simulation platform for **Horse Powertrain**.
+EU heavy-duty vehicle (truck/bus) powertrain benchmarking and CO2 simulation platform — a demonstration project built on public EU regulator data.
 
 [![Tests](https://img.shields.io/badge/tests-82%20passed-success?style=flat-square&logo=pytest)](tests/)
 [![Python](https://img.shields.io/badge/python-3.11+-blue?style=flat-square&logo=python)](pyproject.toml)

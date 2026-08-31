@@ -764,7 +764,7 @@ with tab_pipe:
 # --------------------------------------------------------------------------- documentation
 with tab_docs:
     st.subheader("📚 Platform & Regulatory Documentation")
-    st.caption("Complete technical documentation for Horse Powertrain HDV benchmarking, VECTO methodology, and ML architecture.")
+    st.caption("Complete technical documentation for the HDV benchmarking pipeline, VECTO methodology, and ML architecture.")
 
     _SLIDES_PATH = ROOT / "docs" / "presentation.html"
     if _SLIDES_PATH.exists():

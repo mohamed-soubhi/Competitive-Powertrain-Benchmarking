@@ -1,6 +1,6 @@
 """Honest regression evaluation for a large tabular dataset.
 
-The LUZA-kit original did Leave-One-Out on ~30 rows. Here n is ~10^5–10^6, so
+The reusable kit's original did Leave-One-Out on ~30 rows. Here n is ~10^5–10^6, so
 LOO is neither possible nor needed: the headline is **shuffled K-fold CV**
 (out-of-fold), fitted on a bounded random subsample for speed, with
 
