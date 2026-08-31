@@ -144,20 +144,20 @@
             <!-- SOURCE band -->
             <rect x="20" y="20" width="1140" height="52" rx="10"
                   class="fill-[#2a78d6] dark:fill-[#1c3a5e] stroke-[#1c5cab] dark:stroke-[#3987e5]" stroke-width="1"/>
-            <text x="590" y="42" text-anchor="middle" font-size="15" font-weight="700" class="fill-white">EEA HDV CO&#8322; monitoring &nbsp;&middot;&nbsp; Regulation (EU) 2018/956</text>
+            <text x="590" y="42" text-anchor="middle" font-size="15" font-weight="700" class="fill-white">EEA HDV CO&#8322; monitoring &#160;&#183;&#160; Regulation (EU) 2018/956</text>
             <text x="590" y="61" text-anchor="middle" font-size="12" class="fill-white/85"
-                  font-family="'JetBrains Mono', monospace">discodata.eea.europa.eu/sql &nbsp;&mdash;&nbsp; SQL over HTTP, no auth</text>
+                  font-family="'JetBrains Mono', monospace">discodata.eea.europa.eu/sql &#160;&#8212;&#160; SQL over HTTP, no auth</text>
 
             <!-- 4 stage columns -->
             <g font-size="13">
               <!-- 1 MINE -->
               <rect x="20" y="110" width="250" height="210" rx="12"
                     class="fill-white dark:fill-[#1a1a19] stroke-[#e6e5e2] dark:stroke-[#3a3a37]" stroke-width="1.5"/>
-              <text x="40" y="136" font-size="11" font-weight="700" letter-spacing="1.5" class="fill-[#1c5cab] dark:fill-[#3987e5]">01 &nbsp; MINE</text>
+              <text x="40" y="136" font-size="11" font-weight="700" letter-spacing="1.5" class="fill-[#1c5cab] dark:fill-[#3987e5]">01 &#160; MINE</text>
               <text x="40" y="160" font-size="13.5" font-weight="700" class="fill-[#0b0b0b] dark:fill-white">Chunked HTTP pull</text>
               <text x="40" y="182" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">fetch_eea_hdv.py</text>
               <text x="40" y="199" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">fetch_eea_hdv_viewer.py</text>
-              <text x="40" y="228" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">WHERE year &times; OEM</text>
+              <text x="40" y="228" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">WHERE year &#215; OEM</text>
               <text x="40" y="245" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">retry + backoff</text>
               <text x="40" y="278" font-size="11" font-weight="700" class="fill-[#0b0b0b] dark:fill-white">&#8595; output</text>
               <text x="40" y="298" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">data/raw/*.json</text>
@@ -166,25 +166,25 @@
               <!-- 2 VALIDATE + LOAD -->
               <rect x="310" y="110" width="250" height="210" rx="12"
                     class="fill-white dark:fill-[#1a1a19] stroke-[#e6e5e2] dark:stroke-[#3a3a37]" stroke-width="1.5"/>
-              <text x="330" y="136" font-size="11" font-weight="700" letter-spacing="1.5" class="fill-[#1c5cab] dark:fill-[#3987e5]">02 &nbsp; VALIDATE + LOAD</text>
+              <text x="330" y="136" font-size="11" font-weight="700" letter-spacing="1.5" class="fill-[#1c5cab] dark:fill-[#3987e5]">02 &#160; VALIDATE + LOAD</text>
               <text x="330" y="160" font-size="13.5" font-weight="700" class="fill-[#0b0b0b] dark:fill-white">pydantic gate</text>
-              <text x="330" y="182" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">reclean.py &middot; schema.py</text>
+              <text x="330" y="182" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">reclean.py &#183; schema.py</text>
               <text x="330" y="205" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">physical bounds</text>
               <text x="330" y="222" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">out-of-range &#8594; None</text>
               <text x="330" y="239" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">OEM canonicalisation</text>
               <text x="330" y="256" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">powertrain classifier</text>
               <text x="330" y="285" font-size="11" font-weight="700" class="fill-[#0b0b0b] dark:fill-white">&#8595; store</text>
               <text x="330" y="305" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">powerbench.duckdb</text>
-              <text x="330" y="320" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">hdv.parquet &middot; manifest.json</text>
+              <text x="330" y="320" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">hdv.parquet &#183; manifest.json</text>
 
               <!-- 3 ANALYSE + MODEL -->
               <rect x="600" y="110" width="250" height="210" rx="12"
                     class="fill-white dark:fill-[#1a1a19] stroke-[#e6e5e2] dark:stroke-[#3a3a37]" stroke-width="1.5"/>
-              <text x="620" y="136" font-size="11" font-weight="700" letter-spacing="1.5" class="fill-[#1c5cab] dark:fill-[#3987e5]">03 &nbsp; ANALYSE + MODEL</text>
+              <text x="620" y="136" font-size="11" font-weight="700" letter-spacing="1.5" class="fill-[#1c5cab] dark:fill-[#3987e5]">03 &#160; ANALYSE + MODEL</text>
               <text x="620" y="160" font-size="13.5" font-weight="700" class="fill-[#0b0b0b] dark:fill-white">EDA &amp; honest ML</text>
-              <text x="620" y="182" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">benchmark.py &middot; features.py</text>
-              <text x="620" y="199" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">modeleval.py &middot; train_co2v.py</text>
-              <text x="620" y="228" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">OEM &times; segment CO&#8322;v</text>
+              <text x="620" y="182" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">benchmark.py &#183; features.py</text>
+              <text x="620" y="199" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">modeleval.py &#183; train_co2v.py</text>
+              <text x="620" y="228" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">OEM &#215; segment CO&#8322;v</text>
               <text x="620" y="245" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">leakage guard</text>
               <text x="620" y="262" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">5-fold out-of-fold CV</text>
               <text x="620" y="291" font-size="11" font-weight="700" class="fill-[#0b0b0b] dark:fill-white">&#8595; artefact</text>
@@ -193,14 +193,14 @@
               <!-- 4 DELIVER -->
               <rect x="890" y="110" width="270" height="210" rx="12"
                     class="fill-white dark:fill-[#1a1a19] stroke-[#e6e5e2] dark:stroke-[#3a3a37]" stroke-width="1.5"/>
-              <text x="910" y="136" font-size="11" font-weight="700" letter-spacing="1.5" class="fill-[#1c5cab] dark:fill-[#3987e5]">04 &nbsp; DELIVER</text>
-              <text x="910" y="160" font-size="13.5" font-weight="700" class="fill-[#0b0b0b] dark:fill-white">Streamlit app &mdash; 8 tabs</text>
+              <text x="910" y="136" font-size="11" font-weight="700" letter-spacing="1.5" class="fill-[#1c5cab] dark:fill-[#3987e5]">04 &#160; DELIVER</text>
+              <text x="910" y="160" font-size="13.5" font-weight="700" class="fill-[#0b0b0b] dark:fill-white">Streamlit app &#8212; 8 tabs</text>
               <text x="910" y="182" font-size="11.5" font-family="'JetBrains Mono', monospace" class="fill-[#52514e] dark:fill-[#c3c2b7]">app/streamlit_app.py</text>
-              <text x="910" y="205" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">Pipeline &middot; Overview &middot; Distributions</text>
-              <text x="910" y="222" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">Correlations &middot; Benchmark &middot; ML</text>
-              <text x="910" y="239" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">Metrics &middot; Documentation &middot; Provenance</text>
+              <text x="910" y="205" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">Pipeline &#183; Overview &#183; Distributions</text>
+              <text x="910" y="222" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">Correlations &#183; Benchmark &#183; ML</text>
+              <text x="910" y="239" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">Metrics &#183; Documentation &#183; Provenance</text>
               <text x="910" y="268" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">live pipeline runner (subprocess)</text>
-              <text x="910" y="285" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">light / dark &middot; static HTML export</text>
+              <text x="910" y="285" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">light / dark &#183; static HTML export</text>
             </g>
 
             <!-- flow arrows -->
@@ -214,9 +214,9 @@
             <!-- shared core band -->
             <rect x="20" y="358" width="1140" height="50" rx="10"
                   class="fill-white dark:fill-[#1a1a19] stroke-[#2a78d6] dark:stroke-[#3987e5]" stroke-width="1" stroke-dasharray="4 4"/>
-            <text x="40" y="379" font-size="12" font-weight="700" class="fill-[#0b0b0b] dark:fill-white">shared core &nbsp;
+            <text x="40" y="379" font-size="12" font-weight="700" class="fill-[#0b0b0b] dark:fill-white">shared core &#160;
               <tspan font-family="'JetBrains Mono', monospace" font-weight="400" class="fill-[#52514e] dark:fill-[#c3c2b7]">powerbench/</tspan></text>
-            <text x="40" y="397" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">paths &middot; config &middot; discodata &middot; schema &middot; viewer_map &middot; dataio &middot; benchmark &middot; features &middot; modeleval &middot; theme &mdash; imported by every stage above</text>
+            <text x="40" y="397" font-size="11.5" class="fill-[#52514e] dark:fill-[#c3c2b7]">paths &#183; config &#183; discodata &#183; schema &#183; viewer_map &#183; dataio &#183; benchmark &#183; features &#183; modeleval &#183; theme &#8212; imported by every stage above</text>
           </svg>
           <figcaption class="mt-2 text-[11px] text-[#52514e] dark:text-[#c3c2b7]">Figure&nbsp;1 &mdash; end-to-end architecture. Everything after the mine step is offline; <code class="font-mono">manifest.json</code> is the authority on the active dataset.</figcaption>
         </figure>
