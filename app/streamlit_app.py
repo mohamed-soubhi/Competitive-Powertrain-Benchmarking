@@ -724,10 +724,14 @@ def render_ml_set(setname: str, S: dict) -> None:
         st.caption("Illustrative. The model sees only these inputs — real CO2v also "
                    "depends on aerodynamics, tyres, gearbox and auxiliaries.")
 
-    with st.expander("📖 Deep-Dive: Machine Learning Case Study & Parameter Selection Rationale", expanded=False):
+
+def render_ml_case_study() -> None:
+    """Static ML case-study panel — rendered once, not per feature set."""
+    with st.expander("📖 Deep-Dive: Machine Learning Case Study & Parameter Selection Rationale",
+                     expanded=False):
         ML_CASE_STUDY_PATH = ROOT / "docs" / "ml_case_study.html"
-        c_left, c_right = st.columns([1, 2])
         if ML_CASE_STUDY_PATH.exists():
+            c_left, c_right = st.columns([1, 2])
             with c_left:
                 st.download_button(
                     "📥 Download ML Case Study (.html)",
@@ -735,6 +739,7 @@ def render_ml_set(setname: str, S: dict) -> None:
                     file_name="ml_models_case_study.html",
                     mime="text/html",
                     width="stretch",
+                    key="ml_case_study_dl",
                 )
             with c_right:
                 st.link_button(
@@ -746,7 +751,7 @@ def render_ml_set(setname: str, S: dict) -> None:
             "### Why HistGradientBoostingRegressor?\n"
             "- **Non-Linear Interactions:** Aerodynamic drag ($v^2$) and engine thermal efficiency islands cannot be modeled with linear coefficients ($R^2=0.312$ linear vs $0.595$ HGB).\n"
             "- **Zero Target Leakage:** Dynamometer cycle emissions (`WHTC`, `WHSC` in g/kWh) and freight efficiencies (`COL_CO2_gtkm`) are strictly banned by `assert_no_leakage()`.\n"
-            "- **Hyperparameters:** `max_iter=300`, `learning_rate=0.08`, `max_leaf_nodes=31` ($2^5-1$). Prevents memorization of OEM homologation codes while capturing 3-way interactions (Mass $\times$ Displacement $\times$ Vehicle Group).\n"
+            "- **Hyperparameters:** `max_iter=300`, `learning_rate=0.08`, `max_leaf_nodes=31` ($2^5-1$). Prevents memorization of OEM homologation codes while capturing 3-way interactions (Mass $\\times$ Displacement $\\times$ Vehicle Group).\n"
             "- **Feature Impact:** Chassis curb mass and vehicle group explain ~60% of variance; engine displacement and rated speed (downspeeding) provide significant secondary lift.\n"
             "- **Extrapolation Safeguard:** Training envelope percentiles ($p_1, p_{99}$) warn engineers when slider inputs leave empirical boundaries."
         )
@@ -803,3 +808,4 @@ with tab_ml:
         for setname, _tab in _mlt.items():
             with _tab:
                 render_ml_set(setname, _rep['sets'][setname])
+        render_ml_case_study()
