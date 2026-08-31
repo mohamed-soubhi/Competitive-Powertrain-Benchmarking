@@ -14,6 +14,7 @@ EU heavy-duty vehicle (truck/bus) powertrain benchmarking and CO2 simulation pla
 
 - **Interactive GitHub Pages App**: [https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/](https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/)
 - **Technical HTML Documentation**: [https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/documentation.html](https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/documentation.html)
+- **Presentation deck** (16 slides, keyboard / scroll): [https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/presentation.html](https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/presentation.html)
 - **Streamlit Community Cloud**: Deploy directly via `app/streamlit_app.py` or test the full pipeline locally.
 
 ---

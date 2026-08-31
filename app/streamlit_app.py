@@ -766,6 +766,26 @@ with tab_docs:
     st.subheader("📚 Platform & Regulatory Documentation")
     st.caption("Complete technical documentation for Horse Powertrain HDV benchmarking, VECTO methodology, and ML architecture.")
 
+    _SLIDES_PATH = ROOT / "docs" / "presentation.html"
+    if _SLIDES_PATH.exists():
+        sc1, sc2 = st.columns([1, 2])
+        with sc1:
+            st.download_button(
+                "🎞️ Download Presentation (.html)",
+                data=_SLIDES_PATH.read_bytes(),
+                file_name="powertrain_benchmarking_presentation.html",
+                mime="text/html",
+                help="16-slide storytelling deck — arrow keys / scroll to advance. Open in a browser.",
+                width="stretch",
+                key="slides_dl",
+            )
+        with sc2:
+            st.link_button(
+                "▶️ Open the Presentation (GitHub Pages)",
+                "https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/presentation.html",
+                width="stretch",
+            )
+
     DOCS_HTML_PATH = ROOT / "docs" / "documentation.html"
     if DOCS_HTML_PATH.exists():
         html_content = DOCS_HTML_PATH.read_text(encoding="utf-8")
