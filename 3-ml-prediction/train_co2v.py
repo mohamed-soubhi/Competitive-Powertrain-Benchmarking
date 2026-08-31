@@ -23,7 +23,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import joblib  # noqa: E402
 from sklearn.ensemble import HistGradientBoostingRegressor  # noqa: E402
 from sklearn.linear_model import LinearRegression  # noqa: E402
 
@@ -73,12 +72,7 @@ def train_one(tag: str, df, features: list[str]) -> dict:
     imp = permutation_importance_df(hgb(), X, y, sample_cap=15000, n_repeats=5)
     out["importance"] = imp.head(15).to_dict(orient="records")
 
-    final = hgb().fit(X.to_numpy(float), y.to_numpy(float))
-    joblib.dump(
-        {"model": final, "features": list(X.columns), "envelope": training_envelope(X),
-         "target": CO2V_TARGET, "tag": tag, "cv_mae": out["models"]["HistGradientBoosting"]["kfold_mae"]},
-        ML_OUTPUT_DIR / f"co2v_{tag}.joblib",
-    )
+    out["envelope"] = training_envelope(X)
     return out
 
 
@@ -97,7 +91,7 @@ def main() -> int:
         },
     }
     OUT_JSON.write_text(json.dumps(results, indent=2), encoding="utf-8")
-    log.info("wrote %s + co2v_base.joblib / co2v_rich.joblib", OUT_JSON.name)
+    log.info("wrote %s", OUT_JSON.name)
 
     for tag, s in results["sets"].items():
         h = s["models"]["HistGradientBoosting"]

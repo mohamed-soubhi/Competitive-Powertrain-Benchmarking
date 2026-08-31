@@ -12,7 +12,7 @@ def _load_build_stages():
     start = src.index("def build_stages(")
     end = src.index("\ndef execute(")
     ns: dict = {"YEARS_VEHICLE": (2019, 2020), "YEARS_VIEWER": (2023,),
-               "FETCH_VEHICLE": "F_V", "FETCH_VIEWER": "F_VW", "RECLEAN": "RC"}
+               "FETCH_VEHICLE": "F_V", "FETCH_VIEWER": "F_VW", "RECLEAN": "RC", "TRAIN_ML": "ML"}
     exec(compile(src[start:end], str(_APP), "exec"), ns)
     return ns["build_stages"]
 
@@ -20,27 +20,31 @@ def _load_build_stages():
 build_stages = _load_build_stages()
 
 
-def test_reclean_only_no_fetch():
-    st = build_stages([2019, 2020, 2023], mine=False)
-    assert len(st) == 1
-    assert st[0][1] == ["RC"]
+def test_reload_only_no_fetch_with_train():
+    st = build_stages([2019, 2020, 2023], mine=False, train=True)
+    assert [s[1] for s in st] == [["RC"], ["ML"]]
 
 
-def test_mine_all_years():
-    st = build_stages([2019, 2020, 2023], mine=True)
+def test_reload_only_no_train():
+    st = build_stages([2019, 2020, 2023], mine=False, train=False)
+    assert [s[1] for s in st] == [["RC"]]
+
+
+def test_full_all_years():
+    st = build_stages([2019, 2020, 2023], mine=True, train=True)
     labels = [s[0] for s in st]
     assert any("CO2_HeavyDutyVehicles" in x for x in labels)
     assert any("HDV_2023_viewer" in x for x in labels)
-    assert st[-1][1] == ["RC"]
     assert st[0][1] == ["F_V", "--years", "2019", "2020"]
+    assert [s[1] for s in st][-2:] == [["RC"], ["ML"]]
 
 
 def test_mine_only_2023():
-    st = build_stages([2023], mine=True)
+    st = build_stages([2023], mine=True, train=False)
     assert [s[1] for s in st] == [["F_VW", "--years", "2023"], ["RC"]]
 
 
-def test_mine_only_2019():
-    st = build_stages([2019], mine=True)
+def test_mine_only_2019_with_train():
+    st = build_stages([2019], mine=True, train=True)
     assert st[0][1] == ["F_V", "--years", "2019"]
-    assert len(st) == 2
+    assert [s[1] for s in st] == [["F_V", "--years", "2019"], ["RC"], ["ML"]]

@@ -136,11 +136,30 @@ def load_ml_report() -> dict | None:
     return json.loads(CO2V_MODELS_JSON.read_text(encoding="utf-8"))
 
 
-@st.cache_resource(show_spinner=False)
-def load_ml_model(tag: str):
-    import joblib
-    p = ML_OUTPUT_DIR / f"co2v_{tag}.joblib"
-    return joblib.load(p) if p.exists() else None
+@st.cache_resource(show_spinner="Fitting the what-if model…")
+def whatif_model(tag: str, _key: str):
+    """Refit the CO2v model in-process (avoids sklearn-version pickle issues)."""
+    from sklearn.ensemble import HistGradientBoostingRegressor
+
+    from powerbench.features import CO2V_FEATURES_BASE, CO2V_FEATURES_RICH, CO2V_TARGET, build_xy
+    from powerbench.modeleval import training_envelope
+
+    d = load_hdv()
+    feats = CO2V_FEATURES_RICH if tag == "rich" else CO2V_FEATURES_BASE
+    if tag == "rich":
+        d = d[d["MS_Year"].isin([2019, 2020])]
+    X, y = build_xy(d, feats, CO2V_TARGET)
+    if len(X) > 80_000:
+        samp = X.sample(80_000, random_state=42)
+        X, y = samp, y.loc[samp.index]
+    model = HistGradientBoostingRegressor(max_iter=300, learning_rate=0.08,
+                                          max_leaf_nodes=31, random_state=42)
+    model.fit(X.to_numpy(float), y.to_numpy(float))
+    rep = load_ml_report() or {}
+    cv_mae = rep.get("sets", {}).get(tag, {}).get(
+        "models", {}).get("HistGradientBoosting", {}).get("kfold_mae")
+    return {"model": model, "features": list(X.columns),
+            "envelope": training_envelope(X), "cv_mae": cv_mae}
 
 
 def whatif_vector(bundle: dict, raw: dict) -> "pd.DataFrame":
@@ -199,6 +218,7 @@ def manifest_key() -> str:
 FETCH_VEHICLE = ROOT / "1-mining" / "fetch_eea_hdv.py"
 FETCH_VIEWER = ROOT / "1-mining" / "fetch_eea_hdv_viewer.py"
 RECLEAN = ROOT / "2-pipeline" / "reclean.py"
+TRAIN_ML = ROOT / "3-ml-prediction" / "train_co2v.py"
 YEARS_VEHICLE = (2019, 2020)   # -> CO2_HeavyDutyVehicles
 YEARS_VIEWER = (2023,)         # -> HDV_2023_viewer
 
@@ -220,16 +240,18 @@ def run_stream(args: list[str]):
     yield f"__EXIT__ {proc.returncode}"
 
 
-def build_stages(sel: list[int], mine: bool) -> list[tuple[str, list]]:
+def build_stages(sel: list[int], mine: bool, train: bool = True) -> list[tuple[str, list]]:
     stages: list[tuple[str, list]] = []
     if mine:
         v = sorted(set(sel) & set(YEARS_VEHICLE))
         if v:
-            stages.append((f"Mine {v} — CO2_HeavyDutyVehicles",
+            stages.append((f"1 · Mine {v} — CO2_HeavyDutyVehicles",
                            [FETCH_VEHICLE, "--years", *[str(y) for y in v]]))
         if set(sel) & set(YEARS_VIEWER):
-            stages.append(("Mine [2023] — HDV_2023_viewer", [FETCH_VIEWER, "--years", "2023"]))
-    stages.append(("Re-clean + load DuckDB", [RECLEAN]))
+            stages.append(("1 · Mine [2023] — HDV_2023_viewer", [FETCH_VIEWER, "--years", "2023"]))
+    stages.append(("2 · Validate + load DuckDB", [RECLEAN]))
+    if train:
+        stages.append(("3 · Train CO2v models (~90 s)", [TRAIN_ML]))
     return stages
 
 
@@ -256,6 +278,8 @@ def execute(stages: list[tuple[str, list]]) -> None:
         st.session_state.mining = False
         st.session_state.last_run = time.strftime("%Y-%m-%d %H:%M:%S")
         get_data.clear()
+        load_ml_report.clear()
+        whatif_model.clear()
     if ok:
         st.success("Pipeline finished — reloading data.")
         st.rerun()
@@ -270,29 +294,45 @@ def render_pipeline() -> None:
         "validates, and rebuilds the local DuckDB store. Nothing here is pre-downloaded."
     )
     busy = st.session_state.mining
+
+    _m = read_manifest() or {}
+    _hdv = _m.get("datasets", {}).get("hdv", {})
+    _ml = load_ml_report() or {}
+    s1, s2 = st.columns(2)
+    s1.metric("Dataset rows", f"{_hdv.get('rows', 0):,}",
+              help=f"from {', '.join(x['file'] for x in _hdv.get('source_snapshots', [])) or '—'}")
+    s2.metric("Model trained", (_ml.get("written_at") or "—").replace("T", " ").rstrip("Z"))
+    st.caption(f"Manifest written {_m.get('written_at', '—')}")
+
+    st.markdown("**Stages:** ① mine (live EEA Discodata) → ② validate + load DuckDB → ③ train CO2v models")
     pick = st.multiselect(
         "Reporting years to mine", [*YEARS_VEHICLE, *YEARS_VIEWER],
         default=[*YEARS_VEHICLE, *YEARS_VIEWER],
         help="2019–2020 come from CO2_HeavyDutyVehicles; 2023 from HDV_2023_viewer.",
     )
+    train = st.checkbox("Retrain the CO2v models after loading", value=True, disabled=busy,
+                        help="Adds ~90 s. Off = rebuild the dataset only.")
     confirm = st.checkbox(
-        "I understand this sends queries to the EEA Discodata endpoint",
-        disabled=busy,
+        "I understand this sends queries to the EEA Discodata endpoint", disabled=busy,
     )
-    c1, c2 = st.columns(2)
-    go_mine = c1.button("⛏️  Mine + rebuild", disabled=busy or not confirm or not pick,
+    c1, c2, c3 = st.columns(3)
+    go_mine = c1.button("⛏️  Full: mine → load → train", disabled=busy or not confirm or not pick,
                         width="stretch")
-    go_reclean = c2.button("♻️  Re-clean only (no network)", disabled=busy, width="stretch",
-                           help="Re-validate the existing raw snapshots into DuckDB")
+    go_reclean = c2.button("♻️  Re-load + train (no network)", disabled=busy, width="stretch",
+                           help="Re-validate the existing raw snapshots, then train")
+    go_train = c3.button("🧠  Train models only", disabled=busy, width="stretch",
+                         help="Re-run 3-ml-prediction/train_co2v.py on the current dataset")
     if busy:
         st.info("A run is in progress — this page is busy until it finishes.")
     if st.session_state.last_run:
         st.caption(f"Last run this session: {st.session_state.last_run}")
 
     if go_mine:
-        execute(build_stages(pick, mine=True))
+        execute(build_stages(pick, mine=True, train=train))
+    elif go_train:
+        execute([("3 · Train CO2v models (~90 s)", [TRAIN_ML])])
     elif go_reclean:
-        execute(build_stages(pick, mine=False))
+        execute(build_stages(pick, mine=False, train=train))
 
 
 # --------------------------------------------------------------------------- load
@@ -348,8 +388,8 @@ if fdf.empty:
     st.warning("No rows match the filters.")
     st.stop()
 
-tab_over, tab_bench, tab_dist, tab_ml, tab_corr, tab_gloss, tab_prov, tab_pipe = st.tabs(
-    ["Overview", "Benchmark", "Distributions", "ML", "Correlations", "Metrics", "Provenance", "Pipeline"]
+tab_pipe, tab_over, tab_dist, tab_corr, tab_bench, tab_ml, tab_gloss, tab_prov = st.tabs(
+    ["Pipeline", "Overview", "Distributions", "Correlations", "Benchmark", "ML", "Metrics", "Provenance"]
 )
 
 # --------------------------------------------------------------------------- overview
@@ -617,9 +657,9 @@ with tab_ml:
         )
 
         st.subheader("What-if — predict CO2v for a hypothetical vehicle")
-        bundle = load_ml_model(setname)
+        bundle = whatif_model(setname, manifest_key())
         if bundle is None:
-            st.info(f"`co2v_{setname}.joblib` not found — re-run the training script.")
+            st.info("Could not fit the what-if model — is the dataset loaded?")
         else:
             env = bundle["envelope"]
             cL, cR = st.columns(2)

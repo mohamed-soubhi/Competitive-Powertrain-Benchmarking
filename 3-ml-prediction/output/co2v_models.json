@@ -1,5 +1,5 @@
 {
-  "written_at": "2026-08-31T01:34:56Z",
+  "written_at": "2026-08-31T02:00:48Z",
   "target": "CO2v",
   "sets": {
     "base": {
@@ -8142,7 +8142,153 @@
           "importance_mean": 0.0,
           "importance_std": 0.0
         }
-      ]
+      ],
+      "envelope": {
+        "GrossVehicleMass_t": {
+          "min": 12.1,
+          "max": 33.0,
+          "p1": 18.0,
+          "p99": 29.0
+        },
+        "CurbMassChassis_kg": {
+          "min": 3440.0,
+          "max": 18117.0,
+          "p1": 5587.0,
+          "p99": 9550.0
+        },
+        "ZeroEmissionVehicle": {
+          "min": 0.0,
+          "max": 0.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "HybridElectricHDV": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "DualFuelVehicle": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "VocationalVehicle": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "VehicleGroup_4.0": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "VehicleGroup_5.0": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "VehicleGroup_9.0": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "VehicleGroup_10.0": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "VehicleGroup_nan": {
+          "min": 0.0,
+          "max": 0.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "powertrain_class_Diesel ICE": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "powertrain_class_Dual-fuel": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "powertrain_class_Ethanol ICE": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "powertrain_class_Gas (CNG/LNG)": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "powertrain_class_Hybrid electric": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "powertrain_class_Other / Unknown": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "powertrain_class_nan": {
+          "min": 0.0,
+          "max": 0.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "Engine_FuelType_Diesel CI": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "Engine_FuelType_Ethanol CI": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "Engine_FuelType_NG": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "Engine_FuelType_NG CI / Diesel CI": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "Engine_FuelType_NG PI": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "Engine_FuelType_nan": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        }
+      }
     },
     "rich": {
       "tag": "rich",
@@ -16286,7 +16432,165 @@
           "importance_mean": 0.0,
           "importance_std": 0.0
         }
-      ]
+      ],
+      "envelope": {
+        "GrossVehicleMass_t": {
+          "min": 16.3,
+          "max": 33.0,
+          "p1": 18.0,
+          "p99": 29.0
+        },
+        "CurbMassChassis_kg": {
+          "min": 3629.0,
+          "max": 18117.0,
+          "p1": 5566.0,
+          "p99": 9563.0
+        },
+        "ZeroEmissionVehicle": {
+          "min": 0.0,
+          "max": 0.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "HybridElectricHDV": {
+          "min": 0.0,
+          "max": 0.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "DualFuelVehicle": {
+          "min": 0.0,
+          "max": 0.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "VocationalVehicle": {
+          "min": 0.0,
+          "max": 0.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "Engine_RatedPower_kw": {
+          "min": 150.0,
+          "max": 566.0,
+          "p1": 185.0,
+          "p99": 427.0
+        },
+        "Engine_Displacement_ltr": {
+          "min": 5.1,
+          "max": 16.4,
+          "p1": 6.7,
+          "p99": 16.4
+        },
+        "Engine_RatedSpeed_rpm": {
+          "min": 1600.0,
+          "max": 2700.0,
+          "p1": 1600.0,
+          "p99": 2300.0
+        },
+        "VehicleGroup_4.0": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "VehicleGroup_5.0": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "VehicleGroup_9.0": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "VehicleGroup_10.0": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "VehicleGroup_nan": {
+          "min": 0.0,
+          "max": 0.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "powertrain_class_Diesel ICE": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "powertrain_class_Ethanol ICE": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "powertrain_class_Gas (CNG/LNG)": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "powertrain_class_nan": {
+          "min": 0.0,
+          "max": 0.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "Engine_FuelType_Diesel CI": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "Engine_FuelType_Ethanol CI": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "Engine_FuelType_NG": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "Engine_FuelType_NG PI": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "Engine_FuelType_nan": {
+          "min": 0.0,
+          "max": 0.0,
+          "p1": 0.0,
+          "p99": 0.0
+        },
+        "AxleConfiguration_4x2": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "AxleConfiguration_6x2": {
+          "min": 0.0,
+          "max": 1.0,
+          "p1": 0.0,
+          "p99": 1.0
+        },
+        "AxleConfiguration_nan": {
+          "min": 0.0,
+          "max": 0.0,
+          "p1": 0.0,
+          "p99": 0.0
+        }
+      }
     }
   }
 }

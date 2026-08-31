@@ -4,6 +4,8 @@ EU heavy-duty-vehicle (truck/bus) powertrain benchmarking for Horse Powertrain.
 Pipeline: **mine → validate → EDA → ML → Streamlit dashboard**. Offline-first,
 `uv`-managed, one shared core package (`powerbench/`).
 
+See [`4-docs/ML.md`](4-docs/ML.md) for the modelling write-up.
+
 ## v1 scope
 
 | Stage | Status | Entry point |
@@ -29,8 +31,9 @@ uv run pytest -q             # core-module tests
 
 ## Mine
 
-Either run the scripts below, or use the **Pipeline** tab in the app to trigger a
-live fetch → reclean with streamed progress (nothing pre-downloaded).
+Either run the scripts below, or use the **Pipeline** tab in the app: it runs the
+whole flow — live fetch → validate + load DuckDB → train CO2v models — with
+streamed progress (nothing pre-downloaded).
 
 
 ```bash

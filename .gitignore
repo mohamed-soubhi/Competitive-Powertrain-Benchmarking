@@ -9,4 +9,3 @@ __pycache__/
 *.egg-info/
 example-helper/
 
-3-ml-prediction/output/*.joblib
