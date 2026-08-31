@@ -9,6 +9,7 @@ the DuckDB store the manifest points at.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -225,8 +226,9 @@ with tab_bench:
                     xaxis_title=f"Δ {metric_label}", yaxis_title="", showlegend=False,
                 )), width="stretch")
                 how_to_read(
-                    "Bars left of zero improved; the % label is the relative change. Two "
-                    "reporting years only — a first delta, not a trajectory."
+                    "Bars left of zero improved; the % label is the relative change. "
+                    "2019–2020 and 2023 use different VECTO versions, so read cross-year "
+                    "moves as directional, not exact."
                 )
         else:
             st.info("Only one reporting year in the selection — no trend to plot.")
@@ -275,13 +277,19 @@ with tab_corr:
 # --------------------------------------------------------------------------- provenance
 with tab_prov:
     st.code(provenance_line(), language="text")
-    st.json(read_manifest() or {"manifest": "missing"})
+    st.code(json.dumps(read_manifest() or {"manifest": "missing"}, indent=2), language="json")
     st.markdown(
-        "- **CO2v** — VECTO *declared* specific CO2 (g/km) for the vehicle's main mission "
-        "profile. ~90% populated; the densest continuous target.\n"
-        "- **WHTC/WHSC CO2 (g/kWh)** — engine test-cycle CO2. ~99% populated.\n"
-        "- **COL_CO2_gtkm / L-100km** — payload-normalised long-haul figures. Only ~3% "
-        "populated in 2019–2020.\n"
-        "- **MS_SpecificCO2Emissions** — Member-State-reported; ~5% populated, mixed units — "
-        "shown for completeness, not modelled."
+        "**Sources**  \n"
+        "- **2019–2020** — `CO2_HeavyDutyVehicles`: full VECTO detail (engine ratings, "
+        "WHTC/WHSC, axle).  \n"
+        "- **2023** — `HDV_2023_viewer`: pre-joined OEM+MS view — `CO2v`, registration "
+        "country, mass, segment; no engine ratings.  \n\n"
+        "**Metrics**  \n"
+        "- **CO2v** — VECTO declared specific CO2 (g/km), ~93% populated overall; the "
+        "densest continuous target. 2023 uses a newer VECTO version — cross-year moves are "
+        "directional.  \n"
+        "- **WHTC/WHSC CO2 (g/kWh)** — engine test-cycle CO2, 2019–2020 only.  \n"
+        "- **country** — registration Member State, 2023 rows only.  \n"
+        "- **MS_SpecificCO2Emissions** — Member-State-reported, ~3% populated, mixed units — "
+        "not modelled."
     )

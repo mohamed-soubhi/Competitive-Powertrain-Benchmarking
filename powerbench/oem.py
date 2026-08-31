@@ -48,7 +48,7 @@ def looks_like_address(value: str | None) -> bool:
 
 def canonical_oem(value: str | None) -> tuple[str, str]:
     """Return ``(brand, oem_group)`` for a raw Manufacturer string."""
-    if not value or looks_like_address(value):
+    if not isinstance(value, str) or not value.strip() or looks_like_address(value):
         return _UNKNOWN
     norm = _norm(value)
     for needle, pair in _OEM_RULES:
@@ -97,7 +97,7 @@ def powertrain_class(
         return "Hybrid electric"
     if _truthy_flag(dual_fuel):
         return "Dual-fuel"
-    ft = (fuel_type or "").strip().lower()
+    ft = fuel_type.strip().lower() if isinstance(fuel_type, str) else ""
     if not ft:
         return "Other / Unknown"
     if "ng" in ft or "gas" in ft or "cng" in ft or "lng" in ft:

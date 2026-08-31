@@ -58,3 +58,48 @@ eea_hdv_co2:
   # A chunk larger than this triggers a warning (may be silently truncated by
   # Discodata) -> sub-split by VehicleGroup on the next run.
   max_rows_per_chunk_warn: 150000
+
+
+eea_hdv_viewer:
+  description: >
+    EEA HDV "viewer" tables — a pre-joined OEM + Member-State view per
+    reporting year. Thinner than CO2_HeavyDutyVehicles (no engine ratings /
+    WHTC-WHSC) but adds registration country and a clean CO2v. One table per
+    year; the year is implicit in the table name (no MS_Year column).
+  access:
+    kind: discodata
+    url: https://discodata.eea.europa.eu/sql
+    database: CO2Emission
+    schema: latest
+    table_pattern: "HDV_{year}_viewer"   # {year} substituted per reporting year
+
+  # Verified queryable via `latest` (2026-08): 2023 only. 2024 viewer is listed
+  # in metadata but not yet resolvable; 2021-2022 exist only in the bulk CSV.
+  years: [2023]
+
+  manufacturer_column: OEM_ManufacturerName
+  manufacturer_patterns: [scania, "man truck", daf, volvo, renault, daimler,
+                          mercedes, iveco, ford, fuso, isuzu, otokar, irizar, hyundai]
+
+  # Viewer columns pulled as-is; powerbench/viewer_map.py renames them to the
+  # unified HDVRow field set and injects MS_Year from the table's year.
+  columns:
+    - vehicle_id
+    - OEM_ManufacturerName
+    - OEM_Make
+    - OEM_Model
+    - OEM_VehicleGroup
+    - OEM_VehicleSubGroup
+    - OEM_ZeroEmissionVehicle
+    - OEM_HybridElectricHDV
+    - OEM_DualFuelVehicle
+    - OEM_VocationalVehicle
+    - OEM_Engine_FuelType
+    - OEM_CorrectedActualMass
+    - MS_RegistrationCountry
+    - MS_VehicleCategoryCode
+    - MS_TPMLM
+    - MS_RegistrationDateClean_YYYYMMDD
+    - CO2v
+
+  max_rows_per_chunk_warn: 150000

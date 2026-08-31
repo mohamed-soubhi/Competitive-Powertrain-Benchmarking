@@ -20,6 +20,7 @@ from powerbench.paths import CLEAN_DIR, DUCKDB_PATH, MANIFEST_PATH, RAW_DIR
 
 HDV_TABLE = "hdv"
 RAW_PREFIX = "hdv_co2"
+VIEWER_PREFIX = "hdv_viewer"
 
 
 def sha256_file(path: str | Path) -> str:
@@ -33,6 +34,16 @@ def sha256_file(path: str | Path) -> str:
 def latest_raw_snapshot() -> Path | None:
     files = sorted(RAW_DIR.glob(f"{RAW_PREFIX}_*.json"))
     return files[-1] if files else None
+
+
+def all_raw_snapshots() -> list[Path]:
+    """Newest snapshot for each source prefix (``hdv_co2_*`` and ``hdv_viewer_*``)."""
+    out: list[Path] = []
+    for prefix in (RAW_PREFIX, VIEWER_PREFIX):
+        files = sorted(RAW_DIR.glob(f"{prefix}_*.json"))
+        if files:
+            out.append(files[-1])
+    return out
 
 
 def connect(read_only: bool = False) -> duckdb.DuckDBPyConnection:
@@ -77,7 +88,7 @@ def read_manifest() -> dict[str, Any] | None:
 
 
 def write_manifest(
-    *, parquet_path: Path, rows: int, source_snapshot: Path, rejects: int
+    *, parquet_path: Path, rows: int, source_snapshots: list[Path], rejects: int
 ) -> dict[str, Any]:
     manifest = {
         "written_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -88,8 +99,9 @@ def write_manifest(
                 "sha256": sha256_file(parquet_path),
                 "rows": rows,
                 "rejected_rows": rejects,
-                "source_snapshot": source_snapshot.name,
-                "source_snapshot_sha256": sha256_file(source_snapshot)[:16],
+                "source_snapshots": [
+                    {"file": p.name, "sha256": sha256_file(p)[:16]} for p in source_snapshots
+                ],
             }
         },
     }
@@ -101,9 +113,10 @@ def provenance_line(dataset: str = HDV_TABLE) -> str:
     m = read_manifest()
     if m and dataset in m.get("datasets", {}):
         d = m["datasets"][dataset]
+        srcs = ", ".join(s["file"] for s in d.get("source_snapshots", [])) or "?"
         return (
             f'{d["file"]} | sha256:{d["sha256"][:12]} | {d["rows"]} rows '
-            f'({d["rejected_rows"]} rejected) | from {d["source_snapshot"]} '
+            f'({d["rejected_rows"]} rejected) | from {srcs} '
             f'| manifest {m["written_at"]}'
         )
     return f"{dataset}: no manifest — run 2-pipeline/reclean.py"

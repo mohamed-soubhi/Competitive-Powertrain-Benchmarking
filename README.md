@@ -14,9 +14,11 @@ Pipeline: **mine → validate → EDA → ML → Streamlit dashboard**. Offline-
 | ML + what-if | todo (target TBD after EDA) | Streamlit page |
 | Dashboard shell | **done** | `app/streamlit_app.py` |
 
-Data source (v1): **EEA HDV CO2 monitoring**, Regulation (EU) 2018/956, via the
-Discodata SQL-over-HTTP endpoint — table `[CO2Emission].[latest].[CO2_HeavyDutyVehicles]`.
-KBA / ACEA are parked for v2.
+Data sources (via Discodata SQL-over-HTTP, EEA HDV CO2 monitoring, Reg. (EU) 2018/956):
+- **2019–2020** — `CO2_HeavyDutyVehicles` (full VECTO detail). Miner: `1-mining/fetch_eea_hdv.py`.
+- **2023** — `HDV_2023_viewer` (CO2v + registration country + segment; no engine ratings).
+  Miner: `1-mining/fetch_eea_hdv_viewer.py`; column mapping: `powerbench/viewer_map.py`.
+- 2021–2022 exist only in the 280 MB bulk CSV (not yet ingested). KBA / ACEA parked for v2.
 
 ## Setup
 
@@ -29,7 +31,9 @@ uv run pytest -q             # core-module tests
 
 ```bash
 uv run python 1-mining/fetch_eea_hdv.py --dry-run -v      # print the SQL, fetch nothing
-uv run python 1-mining/fetch_eea_hdv.py                   # all configured years -> raw JSON snapshot
+uv run python 1-mining/fetch_eea_hdv.py            # 2019-2020 -> raw snapshot
+uv run python 1-mining/fetch_eea_hdv_viewer.py     # 2023 -> raw snapshot
+uv run python 2-pipeline/reclean.py                # merge all snapshots -> DuckDB
 uv run python 1-mining/fetch_eea_hdv.py --years 2019      # one year
 ```
 

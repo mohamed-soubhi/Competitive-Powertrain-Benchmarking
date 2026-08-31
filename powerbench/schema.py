@@ -47,17 +47,23 @@ class HDVRow(BaseModel):
     model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
 
     # --- identity ---
-    MS_PK_Vehicle: int
+    # MS_PK_Vehicle is present on the 2019-2020 table; the viewer tables carry a
+    # hex vehicle_id instead. At least one must be set (checked in clean_hdv_record).
+    MS_PK_Vehicle: int | None = None
     OEM_PK_Vehicle: int | None = None
     Meta_OEM_fileId: int | None = None
+    vehicle_id: str | None = Field(default=None, max_length=80)
+    source_table: str | None = Field(default=None, max_length=20)  # "vehicle" | "viewer"
 
     # --- time ---
     MS_Year: int | None = Field(default=None, ge=2018, le=2030)
     MS_RegistrationDate: str | None = None
 
     # --- OEM ---
+    name: str | None = Field(default=None, max_length=120)
     Manufacturer: str | None = Field(default=None, max_length=200)
     ManufacturerAddress: str | None = Field(default=None, max_length=300)
+    country: str | None = Field(default=None, max_length=2)  # MS registration country
 
     # --- powertrain ---
     Engine_FuelType: str | None = Field(default=None, max_length=60)
@@ -71,6 +77,9 @@ class HDVRow(BaseModel):
     Engine_IdlingSpeed_rpm: int | None = None
 
     # --- segment ---
+    # viewer tables give strings like "5", "1s", "32d"; a before-validator keeps
+    # the leading integer and nulls the exotic bus/trailer groups (which carry no
+    # comparable CO2v anyway).
     VehicleGroup: int | None = Field(default=None, ge=0, le=20)
     VehicleSubgroup: str | None = Field(default=None, max_length=20)
     LegislativeClass: str | None = Field(default=None, max_length=20)
@@ -119,6 +128,25 @@ class HDVRow(BaseModel):
             head = v.splitlines()[0].strip() if v.strip() else ""
             return head or None
         return v
+
+    @field_validator("country", mode="before")
+    @classmethod
+    def _country_code(cls, v: Any) -> Any:
+        if isinstance(v, str) and len(v.strip()) == 2 and v.strip().isalpha():
+            return v.strip().upper()
+        return None
+
+    @field_validator("VehicleGroup", mode="before")
+    @classmethod
+    def _group_leading_int(cls, v: Any) -> Any:
+        """'5' -> 5; '32d' / '1s' / '21'+ -> None (no comparable CO2v for those)."""
+        if v in (None, ""):
+            return None
+        s = str(v).strip()
+        if not s.isdigit():
+            return None
+        n = int(s)
+        return n if 0 <= n <= 20 else None
 
     @field_validator("MS_RegistrationDate", mode="before")
     @classmethod
@@ -169,6 +197,17 @@ class HDVRow(BaseModel):
 def clean_hdv_record(raw: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
     """Validate one raw dict. Returns ``(clean, None)`` or ``(None, error_str)``."""
     try:
-        return HDVRow.model_validate(raw).model_dump(), None
+        rec = HDVRow.model_validate(raw).model_dump()
     except Exception as exc:  # noqa: BLE001 - surfaced to caller as a string
         return None, " ".join(str(exc).split())[:240]
+    if rec.get("MS_PK_Vehicle") is None and not rec.get("vehicle_id"):
+        return None, "row has neither MS_PK_Vehicle nor vehicle_id"
+    return rec, None
+
+
+def row_key(rec: dict[str, Any]) -> tuple:
+    """Stable identity for de-duplication across snapshots / source tables."""
+    ident = rec.get("MS_PK_Vehicle")
+    if ident is None:
+        ident = rec.get("vehicle_id")
+    return (rec.get("MS_Year"), ident)

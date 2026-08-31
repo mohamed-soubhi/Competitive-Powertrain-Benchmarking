@@ -28,26 +28,37 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from powerbench.dataio import (  # noqa: E402
-    latest_raw_snapshot,
+    all_raw_snapshots,
     provenance_line,
     write_hdv,
     write_manifest,
 )
 from powerbench.oem import canonical_oem, powertrain_class  # noqa: E402
 from powerbench.paths import ensure_dirs  # noqa: E402
-from powerbench.schema import clean_hdv_record  # noqa: E402
+from powerbench.schema import clean_hdv_record, row_key  # noqa: E402
+from powerbench.viewer_map import map_viewer_row  # noqa: E402
 
 log = logging.getLogger("powerbench.pipeline.reclean")
 
 _REASON_HEAD = 90  # chars of a rejection message used as its group key
 
 
-def validate_rows(raw_rows: list[dict]) -> tuple[list[dict], collections.Counter]:
-    """Return ``(clean_rows, reject_reason_counts)``."""
+def _prepare(row: dict, source: str) -> dict:
+    """Shape a raw row for the schema gate according to its source snapshot."""
+    if source == "eea_hdv_viewer":
+        return map_viewer_row(row, int(row.get("_year")))
+    row.setdefault("source_table", "vehicle")
+    return row
+
+
+def validate_rows(
+    raw_rows: list[dict], source: str
+) -> tuple[list[dict], collections.Counter]:
+    """Return ``(clean_rows, reject_reason_counts)`` for one snapshot's rows."""
     clean: list[dict] = []
     reasons: collections.Counter = collections.Counter()
     for row in raw_rows:
-        rec, err = clean_hdv_record(row)
+        rec, err = clean_hdv_record(_prepare(row, source))
         if rec is None:
             reasons[(err or "unknown")[:_REASON_HEAD]] += 1
             continue
@@ -111,26 +122,41 @@ def domain_summary(df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def run(input_path: Path) -> int:
+def run(input_paths: list[Path]) -> int:
     ensure_dirs()
-    envelope = json.loads(input_path.read_text(encoding="utf-8"))
-    raw_rows = envelope.get("rows", [])
-    log.info("snapshot %s: %d raw rows", input_path.name, len(raw_rows))
+    all_clean: list[dict] = []
+    total_raw = 0
+    for path in input_paths:
+        envelope = json.loads(path.read_text(encoding="utf-8"))
+        raw_rows = envelope.get("rows", [])
+        source = envelope.get("source", "eea_hdv_co2")
+        total_raw += len(raw_rows)
+        log.info("snapshot %s (%s): %d raw rows", path.name, source, len(raw_rows))
 
-    clean, reasons = validate_rows(raw_rows)
-    rejected = len(raw_rows) - len(clean)
-    log.info("validated: %d clean, %d rejected", len(clean), rejected)
-    if reasons:
-        log.warning("rejection reasons (top 10):")
-        for reason, count in reasons.most_common(10):
+        clean, reasons = validate_rows(raw_rows, source)
+        log.info("  -> %d clean, %d rejected", len(clean), len(raw_rows) - len(clean))
+        for reason, count in reasons.most_common(6):
             log.warning("  %6d x  %s", count, reason)
-    if not clean:
-        log.error("no rows survived validation — check schema bounds vs snapshot")
+        all_clean.extend(clean)
+
+    rejected = total_raw - len(all_clean)
+    if not all_clean:
+        log.error("no rows survived validation across %d snapshot(s)", len(input_paths))
         return 1
 
-    df = add_derived(pd.DataFrame(clean))
-    df = df.drop_duplicates(subset=["MS_PK_Vehicle"]).reset_index(drop=True)
-    log.info("after dedup on MS_PK_Vehicle: %d rows, %d columns", len(df), df.shape[1])
+    # de-duplicate on (year, MS_PK_Vehicle | vehicle_id) across all snapshots
+    seen: set = set()
+    deduped: list[dict] = []
+    for rec in all_clean:
+        k = row_key(rec)
+        if k in seen:
+            continue
+        seen.add(k)
+        deduped.append(rec)
+    log.info("combined: %d clean, %d after dedup, %d rejected", len(all_clean), len(deduped), rejected)
+
+    df = add_derived(pd.DataFrame(deduped))
+    log.info("final frame: %d rows, %d columns", len(df), df.shape[1])
 
     print("\n=== per-field coverage ===")
     with pd.option_context("display.max_rows", None, "display.width", 120):
@@ -142,7 +168,7 @@ def run(input_path: Path) -> int:
     manifest = write_manifest(
         parquet_path=parquet,
         rows=len(df),
-        source_snapshot=input_path,
+        source_snapshots=input_paths,
         rejects=rejected,
     )
     log.info("wrote DuckDB table 'hdv' + %s", parquet.name)
@@ -155,7 +181,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    p.add_argument("--input", type=Path, help="raw snapshot JSON (default: newest in 1-mining/data/raw)")
+    p.add_argument(
+        "--input", type=Path, nargs="+",
+        help="raw snapshot JSON file(s) (default: newest hdv_co2_* and hdv_viewer_*)",
+    )
     p.add_argument("-v", "--verbose", action="store_true")
     return p.parse_args(argv)
 
@@ -166,11 +195,12 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)-7s %(name)s | %(message)s",
     )
-    path = args.input or latest_raw_snapshot()
-    if not path or not path.exists():
-        log.error("no raw snapshot found — run 1-mining/fetch_eea_hdv.py first")
+    paths = list(args.input) if args.input else all_raw_snapshots()
+    paths = [p for p in paths if p.exists()]
+    if not paths:
+        log.error("no raw snapshot found — run 1-mining/fetch_eea_hdv*.py first")
         return 1
-    return run(path)
+    return run(paths)
 
 
 if __name__ == "__main__":

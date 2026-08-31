@@ -137,7 +137,8 @@ def app_css(dark: bool) -> str:
   [data-testid="stHeader"] {{ background: {t['app_bg']}; }}
   .stApp, .stApp p, .stApp label, .stApp span, .stApp li,
   .stMarkdown, [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {{ color: {t['text']}; }}
-  [data-testid="stDataFrame"] {{ background: {t['card_bg']}; }}
-  code {{ background: {t['card_bg']}; color: {t['text']}; }}
+  [data-testid="stDataFrame"], [data-testid="stJson"], [data-testid="stCodeBlock"] {{ background: {t['card_bg']}; }}
+  pre, code, .stCodeBlock, [data-testid="stJson"] * {{ background: {t['card_bg']} !important; color: {t['text']} !important; }}
+  [data-testid="stJson"] {{ border: 1px solid {t['grid']}; border-radius: 6px; }}
 </style>
 """
