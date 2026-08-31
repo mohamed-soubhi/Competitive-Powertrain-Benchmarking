@@ -18,6 +18,7 @@ CLEAN_DIR = MINING_DIR / "data" / "cleaned"
 
 ANALYSIS_DIR = ROOT / "2-analysis-dashboards"
 ML_DIR = ROOT / "3-ml-prediction"
+ML_OUTPUT_DIR = ML_DIR / "output"
 APP_DIR = ROOT / "app"
 
 DUCKDB_PATH = CLEAN_DIR / "powerbench.duckdb"
@@ -25,6 +26,6 @@ MANIFEST_PATH = CLEAN_DIR / "manifest.json"
 
 
 def ensure_dirs() -> None:
-    """Create the data directories scripts write into."""
-    for d in (RAW_DIR, CLEAN_DIR):
+    """Create the data / output directories scripts write into."""
+    for d in (RAW_DIR, CLEAN_DIR, ML_OUTPUT_DIR):
         d.mkdir(parents=True, exist_ok=True)

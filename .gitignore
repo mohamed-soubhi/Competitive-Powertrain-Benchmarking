@@ -8,3 +8,5 @@ __pycache__/
 1-mining/data/cleaned/*.parquet
 *.egg-info/
 example-helper/
+
+3-ml-prediction/output/*.joblib

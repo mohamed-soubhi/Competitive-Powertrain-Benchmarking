@@ -34,6 +34,7 @@ from powerbench.benchmark import (  # noqa: E402
     numeric_correlations,
 )
 from powerbench.dataio import load_hdv, provenance_line, read_manifest  # noqa: E402
+from powerbench.paths import ML_OUTPUT_DIR  # noqa: E402
 from powerbench.oem import POWERTRAIN_CLASSES  # noqa: E402
 from powerbench.theme import (  # noqa: E402
     BRAND_ORDER,
@@ -124,6 +125,45 @@ Representative payload); v1 does not pull them.
 simulated truck · g/t·km = efficiency of moving freight. We benchmark on **CO2v**
 and use the rest as features.
 """
+
+CO2V_MODELS_JSON = ML_OUTPUT_DIR / "co2v_models.json"
+
+
+@st.cache_data(show_spinner=False)
+def load_ml_report() -> dict | None:
+    if not CO2V_MODELS_JSON.exists():
+        return None
+    return json.loads(CO2V_MODELS_JSON.read_text())
+
+
+@st.cache_resource(show_spinner=False)
+def load_ml_model(tag: str):
+    import joblib
+    p = ML_OUTPUT_DIR / f"co2v_{tag}.joblib"
+    return joblib.load(p) if p.exists() else None
+
+
+def whatif_vector(bundle: dict, raw: dict) -> "pd.DataFrame":
+    """Build a one-row frame matching the model's one-hot feature columns."""
+    cols = set(bundle["features"])
+    row = {c: 0.0 for c in bundle["features"]}
+    for k, v in raw.items():
+        if v is None:
+            continue
+        if k in cols:                                        # plain numeric / bool feature
+            try:
+                row[k] = float(v)
+            except (TypeError, ValueError):
+                pass
+        cands = {f"{k}_{v}"}                                 # categorical one-hot
+        try:
+            fv = float(v)
+            cands |= {f"{k}_{fv}", f"{k}_{int(fv)}"}
+        except (TypeError, ValueError):
+            pass
+        for c in cands & cols:
+            row[c] = 1.0
+    return pd.DataFrame([row])[bundle["features"]]
 
 
 def styled(fig: go.Figure, **ov) -> go.Figure:
@@ -308,8 +348,8 @@ if fdf.empty:
     st.warning("No rows match the filters.")
     st.stop()
 
-tab_over, tab_bench, tab_dist, tab_corr, tab_gloss, tab_prov, tab_pipe = st.tabs(
-    ["Overview", "Benchmark", "Distributions", "Correlations", "Metrics", "Provenance", "Pipeline"]
+tab_over, tab_bench, tab_dist, tab_ml, tab_corr, tab_gloss, tab_prov, tab_pipe = st.tabs(
+    ["Overview", "Benchmark", "Distributions", "ML", "Correlations", "Metrics", "Provenance", "Pipeline"]
 )
 
 # --------------------------------------------------------------------------- overview
@@ -507,3 +547,107 @@ with tab_pipe:
 # --------------------------------------------------------------------------- metrics glossary
 with tab_gloss:
     st.markdown(GLOSSARY_MD)
+
+# --------------------------------------------------------------------------- ML
+with tab_ml:
+    _rep = load_ml_report()
+    if _rep is None:
+        st.info("No trained model yet. Run `python 3-ml-prediction/train_co2v.py`.")
+    else:
+        st.caption(f"Target: **CO2v** (VECTO declared g/km). Trained {_rep['written_at']}.")
+        setname = st.radio(
+            "Feature set", ["base", "rich"], horizontal=True,
+            format_func=lambda t: {"base": "base — mass + class + powertrain (all years)",
+                                   "rich": "rich — + engine ratings (2019–2020)"}[t],
+        )
+        S = _rep["sets"][setname]
+        H, L = S["models"]["HistGradientBoosting"], S["models"]["Linear"]
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("CV R²", f"{H['kfold_r2_mean']:.3f}", f"±{H['kfold_r2_std']:.3f}", delta_color="off")
+        c2.metric("CV MAE (g/km)", f"{H['kfold_mae']:.1f}")
+        c3.metric("median-baseline MAE", f"{H['baseline_mae']:.1f}")
+        c4.metric("naive R² (train=test)", f"{H['naive_r2']:.3f}")
+        how_to_read(
+            "CV = shuffled 5-fold, scored out-of-fold on a 60k subsample. 'naive' is "
+            "train-on-test, kept only to show the optimism gap. A useful model beats the "
+            "median-baseline MAE."
+        )
+
+        comp = pd.DataFrame({
+            "model": ["HistGradientBoosting", "Linear", "predict median"],
+            "MAE": [H["kfold_mae"], L["kfold_mae"], H["baseline_mae"]],
+        })
+        fig = px.bar(comp, x="MAE", y="model", orientation="h", text="MAE")
+        fig.update_traces(marker_color=[T["accent"], T["muted"], T["bad"]],
+                          texttemplate="%{text:.1f}", textposition="outside",
+                          textfont_color=T["text"], cliponaxis=False)
+        fig.update_yaxes(autorange="reversed")
+        st.plotly_chart(bars(styled(fig, title="Mean absolute error — lower is better",
+                                    xaxis_title="g/km", yaxis_title="", showlegend=False)),
+                        width="stretch")
+
+        a_, o_ = S["scatter"]["actual"], S["scatter"]["oof"]
+        lo, hi = min(a_ + o_), max(a_ + o_)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=[lo, hi], y=[lo, hi], mode="lines",
+                                 line={"dash": "dash", "color": T["muted"]}, name="perfect"))
+        fig.add_trace(go.Scatter(x=a_, y=o_, mode="markers", name="vehicle",
+                                 marker={"size": 5, "color": T["accent"], "opacity": 0.35}))
+        st.plotly_chart(styled(fig, title="Actual vs out-of-fold predicted CO2v",
+                               xaxis_title="actual g/km", yaxis_title="predicted g/km"),
+                        width="stretch")
+        how_to_read(
+            "Each dot is a held-out vehicle. Tight to the dashed line = accurate. Vertical "
+            "spread at a given actual is error from things the model can't see — aero, tyres, "
+            "gearbox, auxiliaries."
+        )
+
+        imp = pd.DataFrame(S["importance"]).sort_values("importance_mean")
+        fig = px.bar(imp, x="importance_mean", y="feature", orientation="h",
+                     error_x="importance_std")
+        fig.update_traces(marker_color=T["accent"])
+        st.plotly_chart(bars(styled(fig, title="Permutation importance (drop in CV R² when shuffled)",
+                                    xaxis_title="Δ R²", yaxis_title="", showlegend=False, height=460)),
+                        width="stretch")
+        how_to_read(
+            "How far CV R² falls when one feature is randomly shuffled. Curb mass and vehicle "
+            "group carry most of it; engine size adds a lot in the rich set. "
+            "`Engine_FuelType_nan` mostly marks 2023 rows — a mild year proxy, noted not hidden."
+        )
+
+        st.subheader("What-if — predict CO2v for a hypothetical vehicle")
+        bundle = load_ml_model(setname)
+        if bundle is None:
+            st.info(f"`co2v_{setname}.joblib` not found — re-run the training script.")
+        else:
+            env = bundle["envelope"]
+            cL, cR = st.columns(2)
+            raw: dict = {}
+            with cL:
+                raw["GrossVehicleMass_t"] = st.slider("GVW (t)", 3.0, 60.0, 26.0, 0.5)
+                raw["CurbMassChassis_kg"] = st.slider("Curb mass (kg)", 2000, 18000, 7800, 100)
+                raw["VehicleGroup"] = st.selectbox("Vehicle group", [4, 5, 9, 10], index=1)
+                raw["powertrain_class"] = st.selectbox(
+                    "Powertrain", list(POWERTRAIN_CLASSES),
+                    index=list(POWERTRAIN_CLASSES).index("Diesel ICE"))
+            with cR:
+                if setname == "rich":
+                    raw["Engine_RatedPower_kw"] = st.slider("Engine power (kW)", 115, 570, 330, 5)
+                    raw["Engine_Displacement_ltr"] = st.slider("Displacement (L)", 3.0, 16.5, 12.5, 0.1)
+                    raw["Engine_RatedSpeed_rpm"] = st.slider("Rated speed (rpm)", 1500, 2900, 1800, 25)
+                    raw["AxleConfiguration"] = st.selectbox("Axle config", ["4x2", "6x2", "6x4", "8x4"])
+                else:
+                    st.caption("Switch to the **rich** set for engine-level inputs.")
+            X1 = whatif_vector(bundle, raw)
+            pred = float(bundle["model"].predict(X1.to_numpy(float))[0])
+            mae = float(bundle.get("cv_mae", H["kfold_mae"]))
+            st.metric("Predicted CO2v", f"{pred:.0f} g/km", help=f"±{mae:.0f} g/km typical CV error")
+            oob = [k for k in ("GrossVehicleMass_t", "CurbMassChassis_kg", "Engine_RatedPower_kw",
+                               "Engine_Displacement_ltr", "Engine_RatedSpeed_rpm")
+                   if k in raw and k in env and not (env[k]["min"] <= raw[k] <= env[k]["max"])]
+            if oob:
+                st.warning("Outside the training range for: " + ", ".join(oob)
+                           + " — this is extrapolation, treat as illustrative only.")
+            st.caption("Illustrative. The model sees only these inputs — real CO2v also "
+                       "depends on aerodynamics, tyres, gearbox and auxiliaries.")
