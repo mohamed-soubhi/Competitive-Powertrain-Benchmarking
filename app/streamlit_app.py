@@ -133,7 +133,7 @@ CO2V_MODELS_JSON = ML_OUTPUT_DIR / "co2v_models.json"
 def load_ml_report() -> dict | None:
     if not CO2V_MODELS_JSON.exists():
         return None
-    return json.loads(CO2V_MODELS_JSON.read_text())
+    return json.loads(CO2V_MODELS_JSON.read_text(encoding="utf-8"))
 
 
 @st.cache_resource(show_spinner=False)

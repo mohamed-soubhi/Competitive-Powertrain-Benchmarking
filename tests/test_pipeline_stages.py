@@ -8,7 +8,7 @@ _APP = Path(__file__).resolve().parent.parent / "app" / "streamlit_app.py"
 
 def _load_build_stages():
     # exec just the function body without importing streamlit widgets:
-    src = _APP.read_text()
+    src = _APP.read_text(encoding="utf-8")
     start = src.index("def build_stages(")
     end = src.index("\ndef execute(")
     ns: dict = {"YEARS_VEHICLE": (2019, 2020), "YEARS_VIEWER": (2023,),
