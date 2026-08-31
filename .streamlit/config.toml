@@ -1,13 +1,14 @@
-# Light theme with high-contrast near-black text on an off-white page,
-# white cards (sidebar, tables, code) for separation. Matches the chart
-# surface / text tokens in powerbench/theme.py.
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+
 [theme]
-base = "light"
 primaryColor = "#2a78d6"
 backgroundColor = "#f5f4f1"
 secondaryBackgroundColor = "#ffffff"
 textColor = "#0b0b0b"
 font = "sans serif"
 
-[server]
-runOnSave = true
+[browser]
+gatherUsageStats = false
