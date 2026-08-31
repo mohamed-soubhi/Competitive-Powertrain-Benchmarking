@@ -81,6 +81,12 @@ uv run pytest -v
 uv run streamlit run app/streamlit_app.py
 ```
 
+> **Switching between Windows and WSL?** A `.venv` built under one OS breaks `uv`
+> on the other — it fails on the `lib64` symlink with *"failed to remove file
+> `.venv\lib64`: Access is denied (os error 5)"*. Fix: delete the `.venv` folder
+> (`rd /s /q .venv` on Windows, `rm -rf .venv` on WSL) and re-run `uv sync`. The
+> `run_app.bat` / `run_app.sh` launchers do this automatically before starting the app.
+
 ---
 
 ## ⛏️ Data Mining & Pipeline Commands
