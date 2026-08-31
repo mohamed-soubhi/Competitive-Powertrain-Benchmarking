@@ -9,7 +9,6 @@ the DuckDB store the manifest points at.
 
 from __future__ import annotations
 
-import base64
 import json
 import subprocess
 import sys
@@ -621,10 +620,12 @@ with tab_docs:
                 "https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/documentation.html",
                 width="stretch",
             )
-        _doc_uri = "data:text/html;base64," + base64.b64encode(
-            html_content.encode("utf-8")
-        ).decode("ascii")
-        st.iframe(_doc_uri, height=900)
+        # NOTE: st.components.v1.html is the only API that renders a raw HTML
+        # string in an isolated frame. st.iframe (its suggested "replacement")
+        # takes a URL only — passing a data: URI makes it load the app origin,
+        # which drops the whole dashboard into this tab. Keep components.v1.html.
+        import streamlit.components.v1 as components
+        components.html(html_content, height=900, scrolling=True)
     else:
         st.warning("`docs/documentation.html` not found — showing the inline metrics glossary.")
         st.markdown(GLOSSARY_MD)
