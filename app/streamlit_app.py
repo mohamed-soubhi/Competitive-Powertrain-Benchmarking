@@ -63,6 +63,69 @@ SHORT = {
     "CurbMassChassis_kg": "curb kg", "WHTC_CO2_gkwh": "WHTC g/kWh",
     "WHSC_CO2_gkwh": "WHSC g/kWh", "CO2v": "CO2v g/km",
 }
+
+GLOSSARY_MD = """
+## What the CO2 and spec fields mean
+
+### Engine test-cycle CO2 — a bench test of the engine alone
+The engine (not the whole truck) runs a fixed ~30-minute speed/load profile on a
+dynamometer for EU type approval (Reg. 595/2009, Euro VI).
+
+| Field | Cycle | Meaning |
+|---|---|---|
+| **WHTC g/kWh** | World Harmonised **Transient** Cycle | constantly changing speed + load, mimics stop-go driving, includes a cold start. Always a little higher than WHSC. |
+| **WHSC g/kWh** | World Harmonised **Steady-state** Cycle | 13 fixed load points held steady — the engine's "best case". |
+
+- **Unit `g/kWh`** = grams of CO2 per kWh of work at the crankshaft — a
+  *fuel-efficiency* number for the engine, independent of truck weight, aero,
+  tyres or mission.
+- Typical diesel HDV: WHTC ~600–660, WHSC ~590–620. **Lower = more efficient.**
+- ~99% populated, but **2019–2020 only** (the 2023 viewer table doesn't carry them).
+- **Benchmark caveat:** g/kWh *falls* as engine displacement rises (big engines run
+  nearer their sweet spot), so a raw g/kWh league table flatters OEMs that sell
+  heavy long-haul tractors. Use it as a feature, not a ranking.
+
+### Whole-vehicle CO2 — VECTO simulation
+The truck as a system (engine + gearbox + axles + aero + tyres + auxiliaries) is
+simulated by the EU tool **VECTO** over standard mission profiles.
+
+| Field | Meaning |
+|---|---|
+| **CO2v** (g/km) | VECTO **declared specific CO2** for the vehicle's main mission profile. The headline whole-truck number. ~93% populated across all three years → the **primary benchmark and ML target**. Typical rigid ~660–810 g/km. 2023 uses a newer VECTO version, so cross-year moves are directional, not exact. |
+| **COL_CO2_gtkm** (g/tonne-km) | one specific mission slot (long-haul, one payload). CO2 per tonne of freight moved one km — the real efficiency of *hauling goods*, normalised for truck size. Only ~2–3% populated → shown where present, not modelled in v1. |
+| **COL_CO2_gkm** (g/km) | same mission, not payload-normalised. |
+| **COL_FuelConsumption_l100km** | same mission, litres per 100 km. ~3% populated. |
+
+The `LHL / LHR / RDL / RDR / UDL / UDR …` families in the raw source are the other
+mission profiles (Long Haul, Regional Delivery, Urban Delivery × Loaded /
+Representative payload); v1 does not pull them.
+
+### Member-State reported
+| Field | Meaning |
+|---|---|
+| **MS_SpecificCO2Emissions** | CO2 figure the registering country reported (not the OEM/VECTO chain). ~3–5% populated, mixed units, weak link to CO2v (r ≈ −0.19). Shown for completeness, **not modelled**. |
+
+### Physical spec fields (model features, not CO2)
+| Field | Meaning |
+|---|---|
+| **Engine_RatedPower_kw** | max engine power, kW (~330 avg; 115–566). |
+| **Engine_Displacement_ltr** | swept volume, litres (~11–13 for line-haul diesels). |
+| **Engine_RatedSpeed_rpm** | rpm at rated power (~1600–1900); lower-revving big engines tend to be more efficient. |
+| **GrossVehicleMass_t** | technically permissible max laden mass, tonnes (GVW). Segment proxy. |
+| **CurbMassChassis_kg** | empty chassis mass, kg. |
+| **MS_TechnPermMaxLadenMass** | same concept as GVW, in kg (viewer rows converted from tonnes). |
+| **VehicleGroup** | VECTO class 1–17. v1 keeps 4 / 5 / 9 / 10 for CO2 work; group 5 (4×2 rigid ~18–26 t) dominates. |
+| **VehicleSubgroup** | e.g. `5-LH` = group 5, long-haul. |
+| **AxleConfiguration** | `4x2`, `6x2`, `6x4`, `8x4` (driven × total wheel-ends). |
+| **LegislativeClass** | `N3` (>12 t) / `N2` (3.5–12 t). |
+| **country** | registration Member State (2023 rows only). |
+
+**In one line:** g/kWh = engine efficiency on a bench · CO2v (g/km) = whole
+simulated truck · g/t·km = efficiency of moving freight. We benchmark on **CO2v**
+and use the rest as features.
+"""
+
+
 def styled(fig: go.Figure, **ov) -> go.Figure:
     fig.update_layout(**plotly_layout(DARK, **ov))
     return fig
@@ -245,8 +308,8 @@ if fdf.empty:
     st.warning("No rows match the filters.")
     st.stop()
 
-tab_over, tab_bench, tab_dist, tab_corr, tab_prov, tab_pipe = st.tabs(
-    ["Overview", "Benchmark", "Distributions", "Correlations", "Provenance", "Pipeline"]
+tab_over, tab_bench, tab_dist, tab_corr, tab_gloss, tab_prov, tab_pipe = st.tabs(
+    ["Overview", "Benchmark", "Distributions", "Correlations", "Metrics", "Provenance", "Pipeline"]
 )
 
 # --------------------------------------------------------------------------- overview
@@ -439,3 +502,8 @@ with tab_prov:
 # --------------------------------------------------------------------------- pipeline
 with tab_pipe:
     render_pipeline()
+
+
+# --------------------------------------------------------------------------- metrics glossary
+with tab_gloss:
+    st.markdown(GLOSSARY_MD)
