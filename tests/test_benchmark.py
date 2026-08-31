@@ -88,3 +88,16 @@ def test_improvement_ranking_detects_decline(df):
 def test_improvement_ranking_missing_year_returns_empty(df):
     rank = improvement_ranking(df, "CO2v", "brand", first_year=2019, last_year=2023, min_count=1)
     assert rank.empty
+
+
+def test_fold_brand_majors_and_tail():
+    from powerbench.theme import MAJOR_BRANDS, OTHER_LABEL, brand_color_map, fold_brand
+
+    assert fold_brand("Scania") == "Scania"
+    assert fold_brand("IVECO") == "IVECO"
+    assert fold_brand("Dongfeng") == OTHER_LABEL
+    assert fold_brand("Unknown") == OTHER_LABEL
+    assert fold_brand(None) == OTHER_LABEL
+    cmap = brand_color_map()
+    assert set(cmap) == {*MAJOR_BRANDS, OTHER_LABEL}
+    assert len(set(cmap.values())) == len(cmap)  # no colour reused

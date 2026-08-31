@@ -29,10 +29,16 @@ from powerbench.benchmark import (  # noqa: E402
     improvement_ranking,
     metric_by_dimension,
     numeric_correlations,
-    powertrain_mix,
 )
 from powerbench.dataio import load_hdv, provenance_line, read_manifest  # noqa: E402
-from powerbench.theme import COLORS, CORR_KW, brand_color_map, plotly_layout  # noqa: E402
+from powerbench.theme import (  # noqa: E402
+    COLORS,
+    CORR_KW,
+    CORR_TEXTFONT,
+    brand_color_map,
+    fold_brand,
+    plotly_layout,
+)
 
 st.set_page_config(page_title="Powertrain Benchmarking — EU HDV", page_icon="🚛", layout="wide")
 
@@ -41,17 +47,45 @@ CORR_COLS = [
     "Engine_RatedPower_kw", "Engine_Displacement_ltr", "Engine_RatedSpeed_rpm",
     "GrossVehicleMass_t", "CurbMassChassis_kg", "WHTC_CO2_gkwh", "WHSC_CO2_gkwh", "CO2v",
 ]
+SHORT = {
+    "Engine_RatedPower_kw": "power kW", "Engine_Displacement_ltr": "displ. L",
+    "Engine_RatedSpeed_rpm": "rated rpm", "GrossVehicleMass_t": "GVW t",
+    "CurbMassChassis_kg": "curb kg", "WHTC_CO2_gkwh": "WHTC g/kWh",
+    "WHSC_CO2_gkwh": "WHSC g/kWh", "CO2v": "CO2v g/km",
+}
 CMAP = brand_color_map()
 
 
 def styled(fig: go.Figure, **ov) -> go.Figure:
     fig.update_layout(**plotly_layout(**ov))
+    fig.update_layout(
+        title_font_size=17,
+        font_size=14,
+        legend_font_size=12,
+        bargap=0.28,
+        bargroupgap=0.12,
+    )
+    fig.update_xaxes(title_font_size=13, tickfont_size=12, color=COLORS["text"])
+    fig.update_yaxes(title_font_size=13, tickfont_size=12, color=COLORS["text"])
     return fig
+
+
+def bars(fig: go.Figure) -> go.Figure:
+    fig.update_traces(marker_line_width=0, marker_cornerradius=4)
+    return fig
+
+
+def how_to_read(text: str) -> None:
+    """High-contrast 'how to read this' line (st.caption renders too faint)."""
+    st.markdown(f"<div style='color:{COLORS['text']};font-size:0.9rem;'>▸ {text}</div>",
+                unsafe_allow_html=True)
 
 
 @st.cache_data(show_spinner="Loading cleaned dataset…")
 def get_data(_key: str) -> pd.DataFrame:
-    return load_hdv()
+    df = load_hdv()
+    df["brand"] = df["brand"].map(fold_brand)
+    return df
 
 
 def manifest_key() -> str:
@@ -124,23 +158,24 @@ with tab_over:
         vc = fdf["powertrain_class"].value_counts().reset_index()
         vc.columns = ["powertrain_class", "n"]
         fig = px.bar(vc, x="n", y="powertrain_class", orientation="h", text="n")
-        fig.update_traces(marker_color=COLORS["accent"], textposition="outside")
-        st.plotly_chart(styled(fig, title="Powertrain composition", yaxis_title="",
-                                xaxis_title="vehicles", showlegend=False), width="stretch")
-        st.caption(
-            "**Reading it:** the EU HDV fleet in this window is almost entirely diesel; gas "
-            "(CNG/LNG) is the only sizeable alternative. Zero-emission and hybrid volumes are "
-            "negligible before 2021 — an electrification trend needs the later reporting years."
+        fig.update_traces(marker_color=COLORS["accent"], textposition="outside",
+                          textfont_color=COLORS["text"], cliponaxis=False)
+        st.plotly_chart(bars(styled(fig, title="Powertrain composition", yaxis_title="",
+                                    xaxis_title="vehicles", showlegend=False)), width="stretch")
+        how_to_read(
+            "The EU HDV fleet here is almost entirely diesel; gas (CNG/LNG) is the only "
+            "sizeable alternative. Zero-emission and hybrid volumes are negligible before "
+            "2021 — an electrification trend needs the later reporting years."
         )
     with right:
         gc = fdf.groupby(["MS_Year", "brand"]).size().reset_index(name="n")
-        fig = px.bar(gc, x="brand", y="n", color="MS_Year", barmode="group")
-        st.plotly_chart(styled(fig, title="Vehicles by manufacturer & year",
-                                xaxis_title="", yaxis_title="vehicles"), width="stretch")
-        st.caption(
-            "**Caveat:** counts are certified vehicle *variants* reported to the EEA, not "
-            "registrations or sales. 2020 is a partial reporting period, so lower totals are "
-            "expected — compare *rates*, not raw counts."
+        fig = px.bar(gc, x="brand", y="n", color="MS_Year", barmode="group",
+                     color_discrete_sequence=[COLORS["accent"], COLORS["good"]])
+        st.plotly_chart(bars(styled(fig, title="Vehicles by manufacturer & year",
+                                    xaxis_title="", yaxis_title="vehicles")), width="stretch")
+        how_to_read(
+            "Counts are certified vehicle *variants* reported to the EEA, not registrations "
+            "or sales. 2020 is a partial reporting period — compare rates, not raw counts."
         )
     st.dataframe(fdf.head(500), width="stretch", height=320)
 
@@ -152,19 +187,17 @@ with tab_bench:
     else:
         rank = metric_by_dimension(fdf, metric, dim, min_count=20)
         fig = px.bar(rank, x="mean", y=dim, orientation="h", error_x="std", text="n")
-        colors = [CMAP.get(v, COLORS["muted"]) for v in rank[dim]] if dim in ("brand",) else None
-        if colors:
-            fig.update_traces(marker_color=colors)
-        fig.update_traces(textposition="outside", texttemplate="n=%{text}")
+        colors = [CMAP.get(v, COLORS["muted"]) for v in rank[dim]] if dim == "brand" else COLORS["accent"]
+        fig.update_traces(marker_color=colors, textposition="outside",
+                          texttemplate="n=%{text}", textfont_color=COLORS["text"], cliponaxis=False)
         fig.update_yaxes(autorange="reversed")
-        st.plotly_chart(styled(fig, title=f"{metric_label} by {dim} — lower is better",
-                                xaxis_title=metric_label, yaxis_title="", showlegend=False),
+        st.plotly_chart(bars(styled(fig, title=f"{metric_label} by {dim} — lower is better",
+                                    xaxis_title=metric_label, yaxis_title="", showlegend=False)),
                         width="stretch")
-        st.caption(
-            f"**Relationship:** bar = mean {metric_label} across the filtered vehicles; whisker = "
-            "±1 SD. **What's best:** shortest bar = lowest average CO2. **Caveat:** mix matters — "
-            "an OEM heavy in long-haul tractors (group 5) will look worse than one skewed to "
-            "lighter rigids. Narrow the vehicle-group filter for a like-for-like read."
+        how_to_read(
+            f"Bar = mean {metric_label}; whisker = ±1 SD. Shortest bar = lowest average CO2. "
+            "Mix matters — an OEM heavy in long-haul tractors (group 5) looks worse; narrow "
+            "the vehicle-group filter for a like-for-like read."
         )
 
         tr = co2_trend(fdf, metric, dim, min_count=20)
@@ -173,9 +206,10 @@ with tab_bench:
                 tr, x="MS_Year", y="mean", color=dim, markers=True,
                 color_discrete_map=CMAP if dim == "brand" else None,
             )
+            fig.update_traces(line_width=2.5, marker_size=9)
             fig.update_xaxes(tickvals=sorted(tr["MS_Year"].unique()))
             st.plotly_chart(styled(fig, title=f"{metric_label} over time",
-                                    xaxis_title="reporting year", yaxis_title=metric_label),
+                                   xaxis_title="reporting year", yaxis_title=metric_label),
                             width="stretch")
 
             yrs = sorted(tr["MS_Year"].unique())
@@ -183,18 +217,18 @@ with tab_bench:
             if not imp.empty:
                 fig = px.bar(imp, x="delta", y=dim, orientation="h", text="pct")
                 fig.update_traces(
-                    texttemplate="%{text:.1f}%",
+                    texttemplate="%{text:.1f}%", textfont_color=COLORS["text"],
+                    textposition="outside", cliponaxis=False,
                     marker_color=[COLORS["good"] if d < 0 else COLORS["bad"] for d in imp["delta"]],
                 )
                 fig.update_yaxes(autorange="reversed")
-                st.plotly_chart(styled(
-                    fig, title=f"Change {yrs[0]}→{yrs[-1]}  (green = CO2 fell)",
+                st.plotly_chart(bars(styled(
+                    fig, title=f"Change {yrs[0]}→{yrs[-1]}  (blue = CO2 fell)",
                     xaxis_title=f"Δ {metric_label}", yaxis_title="", showlegend=False,
-                ), width="stretch")
-                st.caption(
-                    "**Reading it:** bars left of zero improved; the % label is the relative "
-                    "change. **Caveat:** two reporting years only — one point each end, no trend "
-                    "line yet. Treat as a first delta, not a trajectory."
+                )), width="stretch")
+                how_to_read(
+                    "Bars left of zero improved; the % label is the relative change. Two "
+                    "reporting years only — a first delta, not a trajectory."
                 )
         else:
             st.info("Only one reporting year in the selection — no trend to plot.")
@@ -208,32 +242,36 @@ with tab_dist:
         fig = px.box(fdf.dropna(subset=[field]), x="brand", y=field, color="brand",
                      color_discrete_map=CMAP, points=False)
         fig.update_xaxes(categoryorder="median ascending")
+        show_legend = False
     else:
-        fig = px.histogram(fdf.dropna(subset=[field]), x=field, nbins=60,
-                           color="powertrain_class")
+        fig = px.histogram(fdf.dropna(subset=[field]), x=field, nbins=60, color="powertrain_class")
+        fig.update_traces(marker_line_width=0)
+        show_legend = True
     st.plotly_chart(styled(fig, title=f"Distribution — {METRIC_LABELS.get(field, field)}",
-                            showlegend=split is False), width="stretch")
-    st.caption(
-        "**Reading it:** the histogram shows the spread of a single spec across the filtered "
-        "fleet; the box view ranks OEMs by median with the IQR as the box. Long right tails on "
-        "power / displacement are the heavy long-haul tractors."
+                           showlegend=show_legend), width="stretch")
+    how_to_read(
+        "Histogram = spread of one spec across the filtered fleet; box view ranks OEMs by "
+        "median with the IQR as the box. Long right tails on power / displacement are the "
+        "heavy long-haul tractors."
     )
 
 # --------------------------------------------------------------------------- correlations
 with tab_corr:
     corr = numeric_correlations(fdf, CORR_COLS)
+    labels = [SHORT.get(c, c) for c in corr.columns]
     fig = go.Figure(go.Heatmap(
-        z=corr.values, x=list(corr.columns), y=list(corr.columns),
-        text=corr.round(2).values, texttemplate="%{text}",
-        colorbar={"title": "r"}, **CORR_KW,
+        z=corr.values, x=labels, y=labels,
+        text=corr.round(2).values, texttemplate="%{text}", textfont=CORR_TEXTFONT,
+        xgap=2, ygap=2, colorbar={"title": "r", "tickfont": {"color": COLORS["text"]}},
+        hovertemplate="%{y} ↔ %{x}<br>r = %{z:.2f}<extra></extra>", **CORR_KW,
     ))
-    st.plotly_chart(styled(fig, title="Pearson correlation — engine, mass, CO2"),
-                    width="stretch")
-    st.caption(
-        "**Reading it:** red = the two specs rise together, blue = one rises as the other falls, "
-        "white ≈ no linear link; |r| > 0.7 is strong. Expect power↔displacement deep red, and "
-        "engine-cycle CO2 (g/kWh) *negatively* correlated with engine size — bigger diesels are "
-        "more efficient per kWh, which is why a raw g/kWh ranking flatters heavy-haul OEMs."
+    st.plotly_chart(styled(fig, title="Pearson correlation — engine, mass, CO2",
+                           xaxis_title="", yaxis_title=""), width="stretch")
+    how_to_read(
+        "Red = the two specs rise together, blue = one rises as the other falls, grey ≈ no "
+        "linear link; |r| > 0.7 is strong (also printed in each cell). Engine-cycle CO2 "
+        "(g/kWh) is *negatively* correlated with engine size — bigger diesels are more "
+        "efficient per kWh, which is why a raw g/kWh ranking flatters heavy-haul OEMs."
     )
 
 # --------------------------------------------------------------------------- provenance
