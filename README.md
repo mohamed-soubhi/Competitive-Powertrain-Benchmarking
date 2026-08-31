@@ -10,9 +10,9 @@ Pipeline: **mine → validate → EDA → ML → Streamlit dashboard**. Offline-
 |-------|--------|-------------|
 | Mining | **done** | `1-mining/fetch_eea_hdv.py` |
 | Validate + DuckDB load | **done** | `2-pipeline/reclean.py` |
-| EDA | todo | Streamlit page |
+| EDA (Overview/Benchmark/Distributions/Correlations) | **done** | `app/streamlit_app.py` |
 | ML + what-if | todo (target TBD after EDA) | Streamlit page |
-| Dashboard | todo | `app/streamlit_app.py` |
+| Dashboard shell | **done** | `app/streamlit_app.py` |
 
 Data source (v1): **EEA HDV CO2 monitoring**, Regulation (EU) 2018/956, via the
 Discodata SQL-over-HTTP endpoint — table `[CO2Emission].[latest].[CO2_HeavyDutyVehicles]`.
