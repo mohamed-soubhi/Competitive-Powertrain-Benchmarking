@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Automotive Data Scientist – Horse Powertrain</title>
+<style>
+  :root{
+    --accent:#c8102e;
+    --dark:#1a1a1a;
+    --gray:#555;
+    --bg:#f7f7f8;
+    --card:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--bg);
+    margin:0;
+    padding:40px 20px;
+    color:var(--dark);
+  }
+  .container{
+    max-width:760px;
+    margin:0 auto;
+  }
+  .header{
+    background:linear-gradient(135deg,var(--accent),#8a0c20);
+    color:#fff;
+    padding:28px 32px;
+    border-radius:14px 14px 0 0;
+  }
+  .header h1{
+    margin:0 0 6px 0;
+    font-size:1.5rem;
+  }
+  .header p{
+    margin:0;
+    opacity:.9;
+    font-size:.95rem;
+  }
+  .meta-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:16px;
+  }
+  .badge{
+    background:rgba(255,255,255,.18);
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:.82rem;
+  }
+  .card{
+    background:var(--card);
+    padding:28px 32px;
+    box-shadow:0 2px 10px rgba(0,0,0,.06);
+  }
+  .card:last-child{
+    border-radius:0 0 14px 14px;
+  }
+  h2{
+    font-size:1.1rem;
+    color:var(--accent);
+    border-bottom:2px solid #eee;
+    padding-bottom:8px;
+    margin-top:0;
+  }
+  ul{
+    padding-left:20px;
+    margin:10px 0;
+  }
+  li{
+    margin-bottom:6px;
+    line-height:1.5;
+  }
+  .mission-flow{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    margin:20px 0;
+    flex-wrap:wrap;
+  }
+  .flow-step{
+    flex:1;
+    min-width:140px;
+    background:#fdf1f2;
+    border:1px solid #f3d6da;
+    border-radius:10px;
+    padding:14px;
+    text-align:center;
+    font-size:.88rem;
+    position:relative;
+  }
+  .flow-step .icon{
+    font-size:1.5rem;
+    display:block;
+    margin-bottom:6px;
+  }
+  .arrow{
+    align-self:center;
+    color:var(--accent);
+    font-size:1.3rem;
+  }
+  .contact-box{
+    background:#fafafa;
+    border-left:4px solid var(--accent);
+    padding:14px 18px;
+    border-radius:6px;
+    margin-top:10px;
+    font-size:.92rem;
+  }
+  .footer-note{
+    text-align:center;
+    color:var(--gray);
+    font-size:.8rem;
+    margin-top:18px;
+  }
+  @media(max-width:600px){
+    .mission-flow{flex-direction:column;}
+    .arrow{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>Automotive Data Scientist</h1>
+    <p>Horse Powertrain</p>
+    <div class="meta-row">
+      <span class="badge">📍 Madrid, Spain</span>
+      <span class="badge">🕒 Full-time</span>
+      <span class="badge">🏠 Hybrid — HQ every 6–8 weeks</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Overview</h2>
+    <ul>
+      <li>Support <strong>market analysis</strong> and <strong>competitive benchmarking</strong></li>
+      <li>Focus area: <strong>powertrain systems and technologies</strong></li>
+      <li>Work closely with <strong>R&D</strong> and the <strong>Benchmarking Team</strong></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Mission — Big Data for R&D</h2>
+    <div class="mission-flow">
+      <div class="flow-step"><span class="icon">🎯</span>Enhance product design based on customer usage</div>
+      <div class="arrow">→</div>
+      <div class="flow-step"><span class="icon">⏱️</span>Reduce development time & cost</div>
+      <div class="arrow">→</div>
+      <div class="flow-step"><span class="icon">✅</span>Improve quality & compliance</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Mandatory Requirements</h2>
+    <ul>
+      <li>Framing data science use cases</li>
+      <li>Data mining, statistical analysis, machine learning</li>
+      <li>Summarizing results (dashboards, studies) and presenting to R&D teams</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Next Step</h2>
+    <p>Interview scheduled for <strong>next Tuesday</strong> with:</p>
+    <div class="contact-box">
+      <strong>Matteo Cangelosi</strong><br>
+      Head of Product Intelligence, Horse Powertrain
+    </div>
+    <p style="margin-top:14px;">Technical questions/doubts can be addressed directly with him during the interview.</p>
+  </div>
+
+</div>
+<p class="footer-note">Shared via email following a prior phone conversation</p>
+</body>
+</html>

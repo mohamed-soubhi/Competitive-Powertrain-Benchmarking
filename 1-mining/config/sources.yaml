@@ -1,0 +1,60 @@
+# Data sources for the Competitive Powertrain Benchmarking Dashboard (v1).
+# v1 = EEA HDV CO2 monitoring only. KBA / ACEA are parked for v2.
+
+eea_hdv_co2:
+  description: >
+    EU heavy-duty vehicle CO2 monitoring under Regulation (EU) 2018/956.
+    Member States report registered trucks/buses; manufacturers report
+    VECTO-certified trucks. Annual reporting periods.
+  access:
+    kind: discodata          # SQL-over-HTTP, no auth
+    url: https://discodata.eea.europa.eu/sql
+    database: CO2Emission
+    schema: latest           # alias; currently resolves to v7r2
+    table: CO2_HeavyDutyVehicles
+  bulk_fallback:
+    zip_csv: https://discomap.eea.europa.eu/App/CO2HDV/HDV_CO2Emission_VehicleExtract_24042025.zip
+    table_definition: https://sdi.eea.europa.eu/catalogue/srv/api/records/22fd286c-9737-4b38-b2bb-1f7a7d3e9916/attachments/HDV-tabledefinition.xlsx
+
+  # Reporting years present in the `latest` Discodata table (verified 2026-08).
+  # The bulk CSV covers 2019-2023; Discodata `latest` currently exposes 2019-2020.
+  years: [2019, 2020]
+
+  # Only manufacturer-reported rows carry VECTO powertrain detail.
+  # Member-State rows (Manufacturer IS NULL) hold only MS_SpecificCO2Emissions.
+  include_ms_reported: false
+
+  # Server-side chunking: one request per (year, manufacturer LIKE pattern).
+  # Patterns are matched case-insensitively against the raw Manufacturer field.
+  manufacturer_patterns:
+    - scania
+    - "man truck"
+    - daf
+    - volvo
+    - renault
+    - daimler
+    - iveco
+    - ford
+    - fuso
+    - isuzu
+    - dongfeng
+
+  # Curated column set pulled from the ~250-column source table.
+  columns:
+    identity:   [MS_PK_Vehicle, OEM_PK_Vehicle, Meta_OEM_fileId]
+    time:       [MS_Year, MS_RegistrationDate]
+    oem:        [Manufacturer, ManufacturerAddress]
+    powertrain: [Engine_FuelType, COL_FuelType, HybridElectricHDV, ZeroEmissionVehicle,
+                 DualFuelVehicle, Engine_Displacement_ltr, Engine_RatedPower_kw,
+                 Engine_RatedSpeed_rpm, Engine_IdlingSpeed_rpm]
+    segment:    [VehicleGroup, VehicleSubgroup, LegislativeClass, AxleConfiguration,
+                 GrossVehicleMass_t, MS_VehicleCategoryCode, VocationalVehicle, ExemptedVehicle]
+    mass:       [CurbMassChassis_kg, COL_TotalVehicleMass_kg, MS_TechnPermMaxLadenMass]
+    co2:        [MS_SpecificCO2Emissions, CO2v, COL_CO2_gtkm, COL_CO2_gkm,
+                 COL_FuelConsumption_l100km, WHTC_CO2_gkwh, WHSC_CO2_gkwh]
+    tech:       [AdvCO2Tech1_AdvancedCO2Technology, AdvCO2Tech1_Category,
+                 ADAS_PredictiveCruiseControl, ADAS_EngineStopStart]
+
+  # A chunk larger than this triggers a warning (may be silently truncated by
+  # Discodata) -> sub-split by VehicleGroup on the next run.
+  max_rows_per_chunk_warn: 150000

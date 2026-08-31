@@ -1,0 +1,62 @@
+[project]
+name = "luza-horse"
+version = "0.2.0"
+description = "EV powertrain competitive benchmarking pipeline (mining, EDA, ML, dashboards)."
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+
+# Runtime deps. requirements.txt is kept in sync for plain-pip users;
+# `uv` reads this list directly (`uv sync`).
+dependencies = [
+    "pandas==3.0.2",
+    "numpy==2.4.4",
+    "scipy==1.17.1",
+    "scikit-learn==1.8.0",
+    "plotly==6.7.0",
+    "requests==2.31.0",
+    "beautifulsoup4==4.12.3",
+    "lxml==5.3.0",
+    "PyYAML==6.0.1",
+    "pydantic==2.13.4",
+    "tenacity==9.0.0",
+    "Markdown==3.7",
+    "scrapling>=0.2.9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.0.3",
+    "pytest-cov==6.0.0",
+    "ruff==0.8.4",
+    "black==24.10.0",
+]
+# optional: interactive control panel (`uv sync --group app`; plotly is already core)
+app = [
+    "streamlit>=1.57",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["luza"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["*.html"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
