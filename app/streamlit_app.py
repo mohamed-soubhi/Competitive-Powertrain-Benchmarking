@@ -9,6 +9,7 @@ the DuckDB store the manifest points at.
 
 from __future__ import annotations
 
+import base64
 import json
 import subprocess
 import sys
@@ -620,8 +621,12 @@ with tab_docs:
                 "https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/documentation.html",
                 width="stretch",
             )
-        st.components.v1.html(html_content, height=800, scrolling=True)
+        _doc_uri = "data:text/html;base64," + base64.b64encode(
+            html_content.encode("utf-8")
+        ).decode("ascii")
+        st.iframe(_doc_uri, height=900)
     else:
+        st.warning("`docs/documentation.html` not found — showing the inline metrics glossary.")
         st.markdown(GLOSSARY_MD)
 
 # --------------------------------------------------------------------------- ML
