@@ -367,25 +367,30 @@ with tab_bench:
 
 # --------------------------------------------------------------------------- distributions
 with tab_dist:
-    num_cols = [c for c in [metric, *CORR_COLS] if c in fdf and fdf[c].notna().sum() > 5]
-    field = st.selectbox("Field", dict.fromkeys(num_cols))
+    num_cols = [c for c in dict.fromkeys([metric, *CORR_COLS])
+                if c in fdf and fdf[c].notna().sum() > 5]
     split = st.checkbox("Split by manufacturer", value=False)
-    if split:
-        fig = px.box(fdf.dropna(subset=[field]), x="brand", y=field, color="brand",
-                     color_discrete_map=CMAP, points=False)
-        fig.update_xaxes(categoryorder="median ascending")
-        show_legend = False
-    else:
-        fig = px.histogram(fdf.dropna(subset=[field]), x=field, nbins=60, color="powertrain_class")
-        fig.update_traces(marker_line_width=0)
-        show_legend = True
-    st.plotly_chart(styled(fig, title=f"Distribution — {METRIC_LABELS.get(field, field)}",
-                           showlegend=show_legend), width="stretch")
     how_to_read(
-        "Histogram = spread of one spec across the filtered fleet; box view ranks OEMs by "
-        "median with the IQR as the box. Long right tails on power / displacement are the "
-        "heavy long-haul tractors."
+        "One chart per numeric field, stacked. Histogram = spread across the filtered "
+        "fleet; the split view is a per-OEM box (median line, IQR box) ordered by median. "
+        "Long right tails on power / displacement are the heavy long-haul tractors."
     )
+    for field in num_cols:
+        if split:
+            fig = px.box(fdf.dropna(subset=[field]), x="brand", y=field, color="brand",
+                         color_discrete_map=CMAP, points=False)
+            fig.update_xaxes(categoryorder="median ascending")
+            show_legend = False
+        else:
+            fig = px.histogram(fdf.dropna(subset=[field]), x=field, nbins=60,
+                               color="powertrain_class")
+            fig.update_traces(marker_line_width=0)
+            show_legend = True
+        st.plotly_chart(
+            styled(fig, title=f"Distribution — {METRIC_LABELS.get(field, SHORT.get(field, field))}",
+                   showlegend=show_legend, height=340),
+            width="stretch",
+        )
 
 # --------------------------------------------------------------------------- correlations
 with tab_corr:
