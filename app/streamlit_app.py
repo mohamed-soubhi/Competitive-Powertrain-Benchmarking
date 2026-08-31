@@ -289,6 +289,12 @@ with tab_over:
     _prev = fdf[_cols].head(500).copy()
     for _b in _prev.columns[_prev.dtypes == bool]:            # bool -> Yes/No text
         _prev[_b] = _prev[_b].map({True: "Yes", False: "No"})
+    # drop columns that are entirely empty for the current selection
+    _empty = [c for c in _prev.columns
+              if _prev[c].replace("", pd.NA).isna().all()]
+    _prev = _prev.drop(columns=_empty)
+    if _empty:
+        st.caption("Hidden (no data for this selection): " + ", ".join(_empty))
     st.dataframe(_prev, width="stretch", height=320, hide_index=True)
 
 # --------------------------------------------------------------------------- benchmark
