@@ -7,3 +7,4 @@ __pycache__/
 1-mining/data/cleaned/*.duckdb
 1-mining/data/cleaned/*.parquet
 *.egg-info/
+example-helper/

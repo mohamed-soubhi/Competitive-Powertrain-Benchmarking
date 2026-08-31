@@ -9,7 +9,7 @@ Pipeline: **mine → validate → EDA → ML → Streamlit dashboard**. Offline-
 | Stage | Status | Entry point |
 |-------|--------|-------------|
 | Mining | **done** | `1-mining/fetch_eea_hdv.py` |
-| Validate + DuckDB load | todo | `2-pipeline/reclean.py` |
+| Validate + DuckDB load | **done** | `2-pipeline/reclean.py` |
 | EDA | todo | Streamlit page |
 | ML + what-if | todo (target TBD after EDA) | Streamlit page |
 | Dashboard | todo | `app/streamlit_app.py` |

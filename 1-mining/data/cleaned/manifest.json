@@ -1,0 +1,14 @@
+{
+  "written_at": "2026-08-31T00:14:22+00:00",
+  "datasets": {
+    "hdv": {
+      "file": "hdv.parquet",
+      "duckdb": "powerbench.duckdb",
+      "sha256": "b11bd04e4fdfd4f712b14e7e7c666de98ac23df1d99f803d59d180a3d67b4773",
+      "rows": 482345,
+      "rejected_rows": 0,
+      "source_snapshot": "hdv_co2_2026-08-31.json",
+      "source_snapshot_sha256": "40ee65ade149633e"
+    }
+  }
+}
