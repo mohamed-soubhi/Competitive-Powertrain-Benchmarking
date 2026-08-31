@@ -108,6 +108,40 @@ uv run python 2-pipeline/reclean.py
 uv run python 3-ml-prediction/train_co2v.py
 ```
 
+### 🔄 Refreshing to the latest available data
+
+The EEA publishes HDV CO2 monitoring on **annual reporting periods** (1 July –
+30 June) with a ~9–12 month lag, so there is always a 1–2 year gap. As of this
+release Discodata's `latest` alias exposes **2019, 2020** (`CO2_HeavyDutyVehicles`)
+and **2023** (`HDV_2023_viewer`); 2021–2022 live only in the bulk CSV.
+
+When a new year is published, pick it up like this:
+
+```bash
+# 1. Probe whether the year has landed (0 rows / error = not yet published)
+curl -s "https://discodata.eea.europa.eu/sql?nrOfHits=1&query=SELECT%20COUNT(*)%20n%20FROM%20%5BCO2Emission%5D.%5Blatest%5D.%5BHDV_2024_viewer%5D"
+
+# 2. Add the year to 1-mining/config/sources.yaml
+#    eea_hdv_viewer:  years: [2023, 2024]        # viewer-style years (>= 2023)
+#    eea_hdv_co2:      years: [2019, 2020, ...]   # only if the base table gains years
+
+# 3. Mine just the new year (older snapshots stay on disk and are reused)
+uv run python 1-mining/fetch_eea_hdv_viewer.py --years 2024
+
+# 4. Re-validate + reload (merges every hdv_co2_*.json and hdv_viewer_*.json) and retrain
+uv run python 2-pipeline/reclean.py
+uv run python 3-ml-prediction/train_co2v.py
+```
+
+Or from the app: **Pipeline** tab → set the years → **Full: mine → load → train**.
+
+- `reclean.py` always merges **all** raw snapshots in `1-mining/data/raw/`. To
+  rebuild from scratch (drop stale years), delete `1-mining/data/raw/*.json` first.
+- The manifest (`1-mining/data/cleaned/manifest.json`) records every source
+  snapshot + its SHA-256, so the active dataset is always auditable.
+- Newer reporting years use a newer VECTO version than 2019–2020 — treat
+  cross-year `CO2v` comparisons as directional.
+
 ---
 
 ## 🧠 Machine Learning Methodology
