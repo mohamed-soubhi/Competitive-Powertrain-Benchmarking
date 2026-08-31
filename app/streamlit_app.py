@@ -304,11 +304,19 @@ with tab_bench:
                 "Pick another metric or widen the filters.")
     else:
         rank = metric_by_dimension(fdf, metric, dim, min_count=20)
-        fig = px.bar(rank, x="mean", y=dim, orientation="h", error_x="std", text="n")
+        fig = px.bar(rank, x="mean", y=dim, orientation="h", error_x="std",
+                     custom_data=["n", "std"])
         colors = [CMAP.get(v, T["muted"]) for v in rank[dim]] if dim == "brand" else T["accent"]
-        fig.update_traces(marker_color=colors, textposition="outside",
-                          texttemplate="n=%{text}", textfont_color=T["text"], cliponaxis=False)
+        fig.update_traces(
+            marker_color=colors, cliponaxis=False,
+            text=[f"n={int(v):,}" for v in rank["n"]],
+            textposition="outside", textfont_color=T["muted"],
+            hovertemplate="%{y}<br>mean %{x:.1f}  ·  SD %{customdata[1]:.1f}"
+                          "<br>n=%{customdata[0]:,}<extra></extra>",
+        )
         fig.update_yaxes(autorange="reversed")
+        _hi = float((rank["mean"] + rank["std"].fillna(0)).max())
+        fig.update_xaxes(range=[0, _hi * 1.18])   # headroom so the outside n= label never clips
         st.plotly_chart(bars(styled(fig, title=f"{metric_label} by {dim} — lower is better",
                                     xaxis_title=metric_label, yaxis_title="", showlegend=False)),
                         width="stretch")
