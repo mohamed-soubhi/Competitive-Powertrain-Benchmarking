@@ -280,7 +280,16 @@ with tab_over:
             "Counts are certified vehicle *variants* reported to the EEA, not registrations "
             "or sales. 2020 is a partial reporting period — compare rates, not raw counts."
         )
-    st.dataframe(fdf.head(500), width="stretch", height=320)
+    st.markdown("**Sample of matching vehicles**")
+    _cols = [c for c in [
+        "MS_Year", "brand", "name", "powertrain_class", "Engine_FuelType",
+        "VehicleGroup", "VehicleSubgroup", "country", "GrossVehicleMass_t",
+        "Engine_RatedPower_kw", "CO2v", "WHTC_CO2_gkwh",
+    ] if c in fdf.columns]
+    _prev = fdf[_cols].head(500).copy()
+    for _b in _prev.columns[_prev.dtypes == bool]:            # bool -> Yes/No text
+        _prev[_b] = _prev[_b].map({True: "Yes", False: "No"})
+    st.dataframe(_prev, width="stretch", height=320, hide_index=True)
 
 # --------------------------------------------------------------------------- benchmark
 with tab_bench:
