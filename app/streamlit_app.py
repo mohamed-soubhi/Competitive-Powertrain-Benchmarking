@@ -32,15 +32,20 @@ from powerbench.benchmark import (  # noqa: E402
 )
 from powerbench.dataio import load_hdv, provenance_line, read_manifest  # noqa: E402
 from powerbench.theme import (  # noqa: E402
-    COLORS,
-    CORR_KW,
-    CORR_TEXTFONT,
+    app_css,
     brand_color_map,
+    corr_kw,
+    corr_textfont,
     fold_brand,
     plotly_layout,
+    tokens,
 )
 
 st.set_page_config(page_title="Powertrain Benchmarking — EU HDV", page_icon="🚛", layout="wide")
+
+DARK = False          # rebound from the sidebar toggle below
+T = tokens(False)
+CMAP = brand_color_map(False)
 
 CO2_METRICS = ["CO2v", "WHTC_CO2_gkwh", "WHSC_CO2_gkwh", "COL_CO2_gtkm", "COL_FuelConsumption_l100km"]
 CORR_COLS = [
@@ -53,20 +58,8 @@ SHORT = {
     "CurbMassChassis_kg": "curb kg", "WHTC_CO2_gkwh": "WHTC g/kWh",
     "WHSC_CO2_gkwh": "WHSC g/kWh", "CO2v": "CO2v g/km",
 }
-CMAP = brand_color_map()
-
-
 def styled(fig: go.Figure, **ov) -> go.Figure:
-    fig.update_layout(**plotly_layout(**ov))
-    fig.update_layout(
-        title_font_size=17,
-        font_size=14,
-        legend_font_size=12,
-        bargap=0.28,
-        bargroupgap=0.12,
-    )
-    fig.update_xaxes(title_font_size=13, tickfont_size=12, color=COLORS["text"])
-    fig.update_yaxes(title_font_size=13, tickfont_size=12, color=COLORS["text"])
+    fig.update_layout(**plotly_layout(DARK, **ov))
     return fig
 
 
@@ -77,7 +70,7 @@ def bars(fig: go.Figure) -> go.Figure:
 
 def how_to_read(text: str) -> None:
     """High-contrast 'how to read this' line (st.caption renders too faint)."""
-    st.markdown(f"<div style='color:{COLORS['text']};font-size:0.9rem;'>▸ {text}</div>",
+    st.markdown(f"<div style='color:{T['text']};font-size:0.9rem;'>▸ {text}</div>",
                 unsafe_allow_html=True)
 
 
@@ -103,6 +96,7 @@ except FileNotFoundError as exc:
 
 # --------------------------------------------------------------------------- sidebar
 with st.sidebar:
+    DARK = st.toggle("🌙 Dark mode", value=False)
     st.header("Filters")
     years = sorted(int(y) for y in df["MS_Year"].dropna().unique())
     sel_years = st.multiselect("Reporting year", years, default=years)
@@ -125,6 +119,10 @@ with st.sidebar:
         format_func=lambda m: METRIC_LABELS.get(m, m),
     )
     dim = st.radio("Compare by", ["brand", "oem_group", "powertrain_class"], horizontal=True)
+
+T = tokens(DARK)
+CMAP = brand_color_map(DARK)
+st.markdown(app_css(DARK), unsafe_allow_html=True)
 
 fdf = filter_frame(
     df, years=sel_years, brands=sel_brands, powertrains=sel_pts, vehicle_groups=sel_groups
@@ -158,8 +156,8 @@ with tab_over:
         vc = fdf["powertrain_class"].value_counts().reset_index()
         vc.columns = ["powertrain_class", "n"]
         fig = px.bar(vc, x="n", y="powertrain_class", orientation="h", text="n")
-        fig.update_traces(marker_color=COLORS["accent"], textposition="outside",
-                          textfont_color=COLORS["text"], cliponaxis=False)
+        fig.update_traces(marker_color=T["accent"], textposition="outside",
+                          textfont_color=T["text"], cliponaxis=False)
         st.plotly_chart(bars(styled(fig, title="Powertrain composition", yaxis_title="",
                                     xaxis_title="vehicles", showlegend=False)), width="stretch")
         how_to_read(
@@ -170,7 +168,7 @@ with tab_over:
     with right:
         gc = fdf.groupby(["MS_Year", "brand"]).size().reset_index(name="n")
         fig = px.bar(gc, x="brand", y="n", color="MS_Year", barmode="group",
-                     color_discrete_sequence=[COLORS["accent"], COLORS["good"]])
+                     color_discrete_sequence=[T["accent"], T["good"]])
         st.plotly_chart(bars(styled(fig, title="Vehicles by manufacturer & year",
                                     xaxis_title="", yaxis_title="vehicles")), width="stretch")
         how_to_read(
@@ -187,9 +185,9 @@ with tab_bench:
     else:
         rank = metric_by_dimension(fdf, metric, dim, min_count=20)
         fig = px.bar(rank, x="mean", y=dim, orientation="h", error_x="std", text="n")
-        colors = [CMAP.get(v, COLORS["muted"]) for v in rank[dim]] if dim == "brand" else COLORS["accent"]
+        colors = [CMAP.get(v, T["muted"]) for v in rank[dim]] if dim == "brand" else T["accent"]
         fig.update_traces(marker_color=colors, textposition="outside",
-                          texttemplate="n=%{text}", textfont_color=COLORS["text"], cliponaxis=False)
+                          texttemplate="n=%{text}", textfont_color=T["text"], cliponaxis=False)
         fig.update_yaxes(autorange="reversed")
         st.plotly_chart(bars(styled(fig, title=f"{metric_label} by {dim} — lower is better",
                                     xaxis_title=metric_label, yaxis_title="", showlegend=False)),
@@ -217,9 +215,9 @@ with tab_bench:
             if not imp.empty:
                 fig = px.bar(imp, x="delta", y=dim, orientation="h", text="pct")
                 fig.update_traces(
-                    texttemplate="%{text:.1f}%", textfont_color=COLORS["text"],
+                    texttemplate="%{text:.1f}%", textfont_color=T["text"],
                     textposition="outside", cliponaxis=False,
-                    marker_color=[COLORS["good"] if d < 0 else COLORS["bad"] for d in imp["delta"]],
+                    marker_color=[T["good"] if d < 0 else T["bad"] for d in imp["delta"]],
                 )
                 fig.update_yaxes(autorange="reversed")
                 st.plotly_chart(bars(styled(
@@ -261,9 +259,9 @@ with tab_corr:
     labels = [SHORT.get(c, c) for c in corr.columns]
     fig = go.Figure(go.Heatmap(
         z=corr.values, x=labels, y=labels,
-        text=corr.round(2).values, texttemplate="%{text}", textfont=CORR_TEXTFONT,
-        xgap=2, ygap=2, colorbar={"title": "r", "tickfont": {"color": COLORS["text"]}},
-        hovertemplate="%{y} ↔ %{x}<br>r = %{z:.2f}<extra></extra>", **CORR_KW,
+        text=corr.round(2).values, texttemplate="%{text}", textfont=corr_textfont(DARK),
+        xgap=2, ygap=2, colorbar={"title": "r", "tickfont": {"color": T["text"]}},
+        hovertemplate="%{y} ↔ %{x}<br>r = %{z:.2f}<extra></extra>", **corr_kw(DARK),
     ))
     st.plotly_chart(styled(fig, title="Pearson correlation — engine, mass, CO2",
                            xaxis_title="", yaxis_title=""), width="stretch")
