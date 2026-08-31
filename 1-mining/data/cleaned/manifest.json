@@ -1,20 +1,20 @@
 {
-  "written_at": "2026-08-31T00:55:20+00:00",
+  "written_at": "2026-08-31T13:11:00+00:00",
   "datasets": {
     "hdv": {
       "file": "hdv.parquet",
       "duckdb": "powerbench.duckdb",
-      "sha256": "cea6e90e03185e25e1ffa6aa2280afb89f21f4900fcbc91a768adf8d6c7def95",
+      "sha256": "3447a36a049bcaed062705a4df2920fa26c2bc9fba224adfbc39ded4eefb9d67",
       "rows": 756149,
       "rejected_rows": 0,
       "source_snapshots": [
         {
           "file": "hdv_co2_2026-08-31.json",
-          "sha256": "40ee65ade149633e"
+          "sha256": "2a9c384776c70015"
         },
         {
           "file": "hdv_viewer_2026-08-31.json",
-          "sha256": "6d00b6e2e26a4c21"
+          "sha256": "9927e1023ce91635"
         }
       ]
     }

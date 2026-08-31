@@ -2,7 +2,7 @@
 
 EU heavy-duty vehicle (truck/bus) powertrain benchmarking and CO2 simulation platform for **Horse Powertrain**.
 
-[![Tests](https://img.shields.io/badge/tests-76%20passed-success?style=flat-square&logo=pytest)](tests/)
+[![Tests](https://img.shields.io/badge/tests-82%20passed-success?style=flat-square&logo=pytest)](tests/)
 [![Python](https://img.shields.io/badge/python-3.11+-blue?style=flat-square&logo=python)](pyproject.toml)
 [![DuckDB](https://img.shields.io/badge/storage-DuckDB%20%2B%20Parquet-yellow?style=flat-square&logo=duckdb)](powerbench/dataio.py)
 [![Streamlit](https://img.shields.io/badge/app-Streamlit-red?style=flat-square&logo=streamlit)](app/streamlit_app.py)
@@ -13,6 +13,7 @@ EU heavy-duty vehicle (truck/bus) powertrain benchmarking and CO2 simulation pla
 ## 🌐 Online Demo & Deployment
 
 - **Interactive GitHub Pages App**: [https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/](https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/)
+- **Technical HTML Documentation**: [https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/documentation.html](https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/documentation.html)
 - **Streamlit Community Cloud**: Deploy directly via `app/streamlit_app.py` or test the full pipeline locally.
 
 ---
@@ -23,7 +24,7 @@ EU heavy-duty vehicle (truck/bus) powertrain benchmarking and CO2 simulation pla
 flowchart LR
     subgraph Mining [1. Live Mining]
         EEA[(EEA Discodata\nSQL-over-HTTP)] --> F1[fetch_eea_hdv.py\n2019-2020]
-        EEA --> F2[fetch_eea_hdv_viewer.py\n2023]
+        EEA --> F2[fetch_eea_hdv_viewer.py\n2023+]
         F1 & F2 --> RAW[Raw JSON Snapshots\n+ .prov.txt sidecars]
     end
 
@@ -51,13 +52,13 @@ flowchart LR
 
 | Tab | Purpose | Key Visualizations / Controls |
 |---|---|---|
-| **① Pipeline** | Live mining & dataset orchestration | Multi-year picker, live Discodata streamer, no-network re-clean, one-click retrain |
+| **① Pipeline** | Live mining & dataset orchestration | Multi-year buttons, single-year mining, Discodata live stream, no-network reload, retrain |
 | **② Overview** | High-level fleet composition | Fleet volume metrics, powertrain breakdown, OEM representation, filtered data preview |
-| **③ Distributions** | Fleet parameter spread | Histograms and per-OEM box plots (CO2v, Power kW, Displacement L, GVW, RPM) |
+| **③ Distributions** | Fleet parameter spread | Nested subtabs: **Overall** (stacked histograms) & **By manufacturer** (per-OEM box plots) |
 | **④ Correlations** | Engineering trade-off analysis | Pearson heatmap (identifies negative link between engine size and brake specific CO2) |
 | **⑤ Benchmark** | OEM competitive ranking | Box plots (median + IQR whiskers), multi-year trend lines, relative Δ % ranking |
 | **⑥ ML** | CO2v predictive modeling & what-if | Out-of-fold scatter, permutation feature importance, interactive parameter sliders |
-| **⑦ Metrics** | Regulatory & test cycle reference | Deep dive into WHTC/WHSC dynamometer cycles vs whole-truck VECTO CO2v vs g/t-km |
+| **⑦ Documentation** | Regulatory & platform reference | Embedded rich HTML technical documentation + one-click offline HTML export |
 | **⑧ Provenance** | Auditability & data lineage | Cryptographic SHA-256 manifest, source table references, rejection counters |
 
 ---
@@ -74,7 +75,7 @@ cd Competitive-Powertrain-Benchmarking
 # 2. Sync dependencies (runtime + dev + streamlit)
 uv sync --group app --group dev
 
-# 3. Run complete test suite (76 offline tests)
+# 3. Run complete test suite (82 offline tests)
 uv run pytest -v
 
 # 4. Launch the Streamlit dashboard
