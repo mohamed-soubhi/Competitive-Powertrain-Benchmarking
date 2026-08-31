@@ -370,6 +370,18 @@ with st.sidebar:
     )
     dim = st.radio("Compare by", ["brand", "oem_group", "powertrain_class"], horizontal=True)
 
+    st.divider()
+    DOCS_HTML_PATH = ROOT / "docs" / "documentation.html"
+    if DOCS_HTML_PATH.exists():
+        st.download_button(
+            "📚 Download HTML Docs",
+            data=DOCS_HTML_PATH.read_bytes(),
+            file_name="powertrain_benchmarking_documentation.html",
+            mime="text/html",
+            help="Download standalone HTML documentation",
+            width="stretch",
+        )
+
 T = tokens(DARK)
 CMAP = brand_color_map(DARK)
 st.markdown(app_css(DARK), unsafe_allow_html=True)
@@ -388,8 +400,8 @@ if fdf.empty:
     st.warning("No rows match the filters.")
     st.stop()
 
-tab_pipe, tab_over, tab_dist, tab_corr, tab_bench, tab_ml, tab_gloss, tab_prov = st.tabs(
-    ["Pipeline", "Overview", "Distributions", "Correlations", "Benchmark", "ML", "Metrics", "Provenance"]
+tab_pipe, tab_over, tab_dist, tab_corr, tab_bench, tab_ml, tab_docs, tab_prov = st.tabs(
+    ["Pipeline", "Overview", "Distributions", "Correlations", "Benchmark", "ML", "Documentation", "Provenance"]
 )
 
 # --------------------------------------------------------------------------- overview
@@ -584,9 +596,33 @@ with tab_pipe:
     render_pipeline()
 
 
-# --------------------------------------------------------------------------- metrics glossary
-with tab_gloss:
-    st.markdown(GLOSSARY_MD)
+# --------------------------------------------------------------------------- documentation
+with tab_docs:
+    st.subheader("📚 Platform & Regulatory Documentation")
+    st.caption("Complete technical documentation for Horse Powertrain HDV benchmarking, VECTO methodology, and ML architecture.")
+
+    DOCS_HTML_PATH = ROOT / "docs" / "documentation.html"
+    if DOCS_HTML_PATH.exists():
+        html_content = DOCS_HTML_PATH.read_text(encoding="utf-8")
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            st.download_button(
+                label="📥 Download Full Documentation (.html)",
+                data=html_content.encode("utf-8"),
+                file_name="powertrain_benchmarking_documentation.html",
+                mime="text/html",
+                help="Save the complete technical documentation as a standalone offline HTML file.",
+                width="stretch",
+            )
+        with c2:
+            st.link_button(
+                "🌐 Open Hosted Docs on GitHub Pages",
+                "https://mohamed-soubhi.github.io/Competitive-Powertrain-Benchmarking/documentation.html",
+                width="stretch",
+            )
+        st.components.v1.html(html_content, height=800, scrolling=True)
+    else:
+        st.markdown(GLOSSARY_MD)
 
 # --------------------------------------------------------------------------- ML
 with tab_ml:

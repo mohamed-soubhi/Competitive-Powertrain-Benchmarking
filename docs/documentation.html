@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Competitive Powertrain Benchmarking — Technical Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#2a78d6',
+              600: '#1c5cab',
+              700: '#1e40af',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    pre, code { font-family: 'JetBrains Mono', monospace; }
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+<body class="bg-[#f5f4f1] text-[#0b0b0b] dark:bg-[#111110] dark:text-[#ffffff] min-h-screen antialiased transition-colors duration-200">
+
+  <!-- Header -->
+  <header class="bg-white dark:bg-[#1a1a19] border-b border-[#e6e5e2] dark:border-[#3a3a37] sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🚛</span>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-bold tracking-tight">Competitive Powertrain Benchmarking</h1>
+            <span class="bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 text-xs px-2 py-0.5 rounded font-semibold">Technical Docs v1.0</span>
+          </div>
+          <p class="text-xs text-[#52514e] dark:text-[#c3c2b7]">Horse Powertrain · EU Heavy-Duty Vehicle Benchmarking Platform</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button id="theme-toggle" class="p-2 text-sm rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37] hover:bg-gray-100 dark:hover:bg-[#252524] transition-colors" title="Toggle Theme">
+          <i data-lucide="moon" class="w-4 h-4 hidden dark:block"></i>
+          <i data-lucide="sun" class="w-4 h-4 block dark:hidden"></i>
+        </button>
+        <a href="https://github.com/mohamed-soubhi/Competitive-Powertrain-Benchmarking" target="_blank" class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 hover:opacity-90 transition-opacity">
+          <i data-lucide="github" class="w-4 h-4"></i>
+          <span>GitHub Repo</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+    
+    <!-- Table of Contents Sidebar -->
+    <aside class="hidden lg:block lg:col-span-1">
+      <div class="sticky top-20 space-y-3 bg-white dark:bg-[#1a1a19] p-4 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37]">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-[#52514e] dark:text-[#c3c2b7]">Documentation Index</h2>
+        <nav class="space-y-1.5 text-xs">
+          <a href="#section-overview" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">1. Executive Overview & Scope</a>
+          <a href="#section-pipeline" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">2. Data Engineering Pipeline</a>
+          <a href="#section-metrics" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">3. Regulatory Metrics & Test Cycles</a>
+          <a href="#section-ml" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">4. Machine Learning & What-If</a>
+          <a href="#section-dashboard" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">5. Streamlit Dashboard Architecture</a>
+          <a href="#section-cli" class="block text-[#52514e] dark:text-[#c3c2b7] hover:text-[#2a78d6] dark:hover:text-[#3987e5] py-1">6. CLI Reference & Verification</a>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Main Documentation Body -->
+    <main class="lg:col-span-3 space-y-10">
+
+      <!-- Section 1: Executive Overview -->
+      <section id="section-overview" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">1. Executive Overview & Scope</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          The <strong>Competitive Powertrain Benchmarking Platform</strong> provides deep empirical benchmarking of European Heavy-Duty Vehicles (HDV, trucks and buses) to evaluate competitor engine specifications, transmission configurations, aerodynamic properties, and certified whole-vehicle CO2 emissions.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <p class="text-xs font-semibold">Total Verified Fleet</p>
+            <p class="text-lg font-bold text-[#2a78d6] dark:text-[#3987e5]">756,149 Vehicles</p>
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <p class="text-xs font-semibold">Reporting Years</p>
+            <p class="text-lg font-bold">2019, 2020 & 2023</p>
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <p class="text-xs font-semibold">Regulatory Framework</p>
+            <p class="text-lg font-bold">Reg. (EU) 2018/956</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Data Engineering Pipeline -->
+      <section id="section-pipeline" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">2. Data Engineering Pipeline</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          The pipeline executes an offline-first, highly reproducible ingest and validation flow without any external runtime dependencies:
+        </p>
+        <div class="space-y-3 text-xs">
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <h3 class="font-bold text-sm text-[#0b0b0b] dark:text-[#ffffff] mb-1">A. Discodata SQL Mining (<code class="font-mono">powerbench/discodata.py</code>)</h3>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              Queries the EEA Discodata SQL Server via REST (<code class="font-mono">https://discodata.eea.europa.eu/sql</code>). Due to pagination quirks in Discodata's <code class="font-mono">p</code> parameter, requests are segmented by SQL <code class="font-mono">WHERE [MS_Year]=... AND LOWER([Manufacturer]) LIKE ...</code> clauses with exponential backoff.
+            </p>
+          </div>
+
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <h3 class="font-bold text-sm text-[#0b0b0b] dark:text-[#ffffff] mb-1">B. Pydantic Validation Gate (<code class="font-mono">powerbench/schema.py</code>)</h3>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              Enforces physical bounds on optional continuous measurements (displacement $\le 40$ L, power $\le 1500$ kW, GVW $\le 120$ t). Out-of-bounds measurements are converted to <code class="font-mono">None</code> rather than discarding valid rows.
+            </p>
+          </div>
+
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <h3 class="font-bold text-sm text-[#0b0b0b] dark:text-[#ffffff] mb-1">C. High-Performance Columnar Storage (<code class="font-mono">powerbench/dataio.py</code>)</h3>
+            <p class="text-[#52514e] dark:text-[#c3c2b7]">
+              Stores clean records into DuckDB (<code class="font-mono">powerbench.duckdb</code>) and Parquet (<code class="font-mono">hdv.parquet</code>) alongside cryptographic audit manifests (<code class="font-mono">manifest.json</code>).
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Regulatory Metrics & Test Cycles -->
+      <section id="section-metrics" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">3. Regulatory Metrics & Test Cycles</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          Understanding European heavy-duty emissions testing requires distinguishing between engine dynamometer approvals, whole-vehicle simulations, and logistics efficiency:
+        </p>
+        
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-xs text-left border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <thead class="bg-gray-100 dark:bg-[#252524] text-[#0b0b0b] dark:text-[#ffffff]">
+              <tr>
+                <th class="p-3 font-semibold">Metric Field</th>
+                <th class="p-3 font-semibold">Test / Method</th>
+                <th class="p-3 font-semibold">Unit</th>
+                <th class="p-3 font-semibold">Engineering Interpretation</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#e6e5e2] dark:divide-[#3a3a37] text-[#52514e] dark:text-[#c3c2b7]">
+              <tr>
+                <td class="p-3 font-mono font-bold text-[#0b0b0b] dark:text-[#ffffff]">WHTC_CO2_gkwh</td>
+                <td class="p-3">World Harmonised Transient Cycle (Euro VI)</td>
+                <td class="p-3 font-mono">g/kWh</td>
+                <td class="p-3">Engine dynamometer brake efficiency under transient stop-and-go conditions.</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-[#0b0b0b] dark:text-[#ffffff]">WHSC_CO2_gkwh</td>
+                <td class="p-3">World Harmonised Steady-State Cycle</td>
+                <td class="p-3 font-mono">g/kWh</td>
+                <td class="p-3">13 steady operating points. Represents the engine's optimal thermodynamic efficiency.</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-[#0b0b0b] dark:text-[#ffffff]">CO2v</td>
+                <td class="p-3">VECTO Vehicle Simulation (Reg. 2018/956)</td>
+                <td class="p-3 font-mono">g/km</td>
+                <td class="p-3"><strong>Primary Benchmark Target.</strong> Whole-truck declared CO2 including aerodynamics, tyres, gearbox, and auxiliaries.</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono font-bold text-[#0b0b0b] dark:text-[#ffffff]">COL_CO2_gtkm</td>
+                <td class="p-3">VECTO Payload Specific Mission</td>
+                <td class="p-3 font-mono">g/t-km</td>
+                <td class="p-3">Freight transport efficiency: grams of CO2 per metric tonne of payload moved 1 km.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 4: Machine Learning & What-If Simulator -->
+      <section id="section-ml" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">4. Machine Learning & What-If Simulator</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          To predict whole-vehicle <code class="font-mono">CO2v</code> without requiring proprietary CAD/VECTO simulation runs, we train a gradient-boosted regression pipeline with strictly audited leakage protection:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div class="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+            <h3 class="font-bold text-blue-900 dark:text-blue-300 text-sm mb-1">Rich Feature Model (2019–2020)</h3>
+            <ul class="space-y-1 text-blue-800 dark:text-blue-200 mt-2">
+              <li>• <strong>Features</strong>: GVW, Curb Mass, Displacement, Power, RPM, Axle Config, Group, Fuel.</li>
+              <li>• <strong>CV R²</strong>: <code class="font-mono">0.595 ± 0.006</code></li>
+              <li>• <strong>CV MAE</strong>: <code class="font-mono">27.8 g/km</code> (vs 49.4 g/km baseline)</li>
+              <li>• <strong>Error Reduction</strong>: <strong>43.7%</strong> improvement over median prediction.</li>
+            </ul>
+          </div>
+
+          <div class="p-4 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <h3 class="font-bold text-[#0b0b0b] dark:text-[#ffffff] text-sm mb-1">Base Feature Model (All Years)</h3>
+            <ul class="space-y-1 text-[#52514e] dark:text-[#c3c2b7] mt-2">
+              <li>• <strong>Features</strong>: GVW, Curb Mass, Vehicle Group, Powertrain Class, Fuel Type.</li>
+              <li>• <strong>CV R²</strong>: <code class="font-mono">0.448 ± 0.018</code></li>
+              <li>• <strong>CV MAE</strong>: <code class="font-mono">45.2 g/km</code> (vs 62.2 g/km baseline)</li>
+              <li>• <strong>Coverage</strong>: 100% of reporting periods (2019, 2020, 2023).</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: Streamlit Dashboard Architecture -->
+      <section id="section-dashboard" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">5. Streamlit Dashboard Architecture</h2>
+        </div>
+        <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
+          The dashboard (<code class="font-mono">app/streamlit_app.py</code>) provides 8 tabs organized logically from data operations to deep analysis:
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <strong class="text-[#0b0b0b] dark:text-[#ffffff]">1. Pipeline Tab:</strong> Live mining interface that triggers subprocess fetching and DuckDB updates with streaming progress.
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <strong class="text-[#0b0b0b] dark:text-[#ffffff]">2. Overview Tab:</strong> Fleet KPIs, powertrain mix charts, OEM vehicle counts, and curated data table.
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <strong class="text-[#0b0b0b] dark:text-[#ffffff]">3. Distributions Tab:</strong> Stacked histograms and per-OEM box plots for physical parameters.
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <strong class="text-[#0b0b0b] dark:text-[#ffffff]">4. Correlations Tab:</strong> Pearson r matrix between engine size, chassis mass, and emissions.
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <strong class="text-[#0b0b0b] dark:text-[#ffffff]">5. Benchmark Tab:</strong> OEM CO2v box plots, multi-year trend tracking, and relative efficiency Δ %.
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <strong class="text-[#0b0b0b] dark:text-[#ffffff]">6. ML Tab:</strong> CV metrics, actual vs predicted scatter, permutation importance, and What-If simulator.
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <strong class="text-[#0b0b0b] dark:text-[#ffffff]">7. Documentation Tab:</strong> Interactive embedded technical docs & one-click HTML download.
+          </div>
+          <div class="p-3 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37]">
+            <strong class="text-[#0b0b0b] dark:text-[#ffffff]">8. Provenance Tab:</strong> SHA-256 audit manifest, snapshot record counters, and Discodata lineage.
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 6: CLI Reference & Verification -->
+      <section id="section-cli" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+          <h2 class="text-xl font-bold">6. CLI Reference & Verification</h2>
+        </div>
+        
+        <div class="space-y-2">
+          <p class="text-xs font-semibold text-[#52514e] dark:text-[#c3c2b7]">Run the offline test suite (76 tests):</p>
+          <pre class="bg-gray-900 text-gray-100 p-3 rounded-lg text-xs overflow-x-auto"><code>uv run pytest -v</code></pre>
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-xs font-semibold text-[#52514e] dark:text-[#c3c2b7]">Launch the Streamlit benchmarking tool:</p>
+          <pre class="bg-gray-900 text-gray-100 p-3 rounded-lg text-xs overflow-x-auto"><code>uv run streamlit run app/streamlit_app.py</code></pre>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <footer class="border-t border-[#e6e5e2] dark:border-[#3a3a37] py-6 text-center text-xs text-[#52514e] dark:text-[#c3c2b7]">
+    Competitive Powertrain Benchmarking Documentation · Horse Powertrain · European Environment Agency (EEA)
+  </footer>
+
+  <script>
+    const themeBtn = document.getElementById('theme-toggle');
+    themeBtn.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+    });
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
