@@ -213,12 +213,17 @@
 
       <!-- Section 4: Machine Learning & What-If Simulator -->
       <section id="section-ml" class="bg-white dark:bg-[#1a1a19] p-6 rounded-xl border border-[#e6e5e2] dark:border-[#3a3a37] space-y-4">
-        <div class="flex items-center space-x-2">
-          <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
-          <h2 class="text-xl font-bold">4. Machine Learning & What-If Simulator</h2>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="w-2 h-6 bg-[#2a78d6] rounded-full"></span>
+            <h2 class="text-xl font-bold">4. Machine Learning & What-If Simulator</h2>
+          </div>
+          <a href="ml_case_study.html" class="inline-flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors">
+            <span>📖 Read ML Case Study ↗</span>
+          </a>
         </div>
         <p class="text-sm leading-relaxed text-[#52514e] dark:text-[#c3c2b7]">
-          To predict whole-vehicle <code class="font-mono">CO2v</code> without requiring proprietary CAD/VECTO simulation runs, we train a gradient-boosted regression pipeline with strictly audited leakage protection:
+          To predict whole-vehicle <code class="font-mono">CO2v</code> without requiring proprietary CAD/VECTO simulation runs, we train a gradient-boosted regression pipeline (<code class="font-mono">HistGradientBoostingRegressor</code>) with strictly audited leakage protection:
         </p>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -241,6 +246,13 @@
               <li>• <strong>Coverage</strong>: 100% of reporting periods (2019, 2020, 2023).</li>
             </ul>
           </div>
+        </div>
+
+        <div class="p-3.5 bg-gray-50 dark:bg-[#222220] rounded-lg border border-[#e6e5e2] dark:border-[#3a3a37] text-xs">
+          <p class="font-semibold text-[#0b0b0b] dark:text-[#ffffff] mb-1">💡 Hyperparameters &amp; Engineering Rationale:</p>
+          <p class="text-[#52514e] dark:text-[#c3c2b7]">
+            Configured with <code class="font-mono">max_iter=300</code>, <code class="font-mono">learning_rate=0.08</code>, and <code class="font-mono">max_leaf_nodes=31</code> ($2^5 - 1$). This depth restriction prevents overfitting on rare vehicle variants while capturing 3-to-4-way non-linear physics interactions (Mass $\times$ Displacement $\times$ Aerodynamic Group). Complete engineering analysis is available in the <a href="ml_case_study.html" class="text-[#2a78d6] underline font-semibold">ML Case Study &amp; Parameter Selection Document</a>.
+          </p>
         </div>
       </section>
 
