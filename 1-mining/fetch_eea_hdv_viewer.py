@@ -41,24 +41,37 @@ def _like(column: str, pattern: str) -> str:
     return f"LOWER([{column}]) LIKE N'%{safe}%'"
 
 
-def build_chunk_queries(source: dict[str, Any]) -> list[dict[str, Any]]:
-    db = source["access"]["database"]
-    schema = source["access"]["schema"]
-    pattern_tpl = source["access"]["table_pattern"]
+def _table_for(source: dict[str, Any], year: int) -> str:
+    return qualified_table(
+        source["access"]["database"],
+        source["access"]["schema"],
+        source["access"]["table_pattern"].format(year=year),
+    )
+
+
+def year_available(client: DiscodataClient, table: str) -> bool:
+    """One cheap probe: does this viewer table exist in Discodata yet?"""
+    try:
+        client.run_sql(f"SELECT TOP 1 1 AS x FROM {table}", nr_of_hits=1)
+        return True
+    except NonRetryableDiscodataError as exc:
+        if "Invalid object name" in str(exc):
+            return False
+        raise
+
+
+def build_chunk_queries(source: dict[str, Any], years: list[int]) -> list[dict[str, Any]]:
     mfr_col = source["manufacturer_column"]
     cols = source["columns"]
-
     chunks: list[dict[str, Any]] = []
-    for year in source["years"]:
-        table = qualified_table(db, schema, pattern_tpl.format(year=year))
+    for year in years:
+        table = _table_for(source, year)
         for pat in source["manufacturer_patterns"]:
-            chunks.append(
-                {
-                    "year": int(year),
-                    "pattern": pat,
-                    "sql": build_select(table, cols, where=[_like(mfr_col, pat)]),
-                }
-            )
+            chunks.append({
+                "year": int(year),
+                "pattern": pat,
+                "sql": build_select(table, cols, where=[_like(mfr_col, pat)]),
+            })
     return chunks
 
 
@@ -70,7 +83,25 @@ def fetch_all(
     rows: list[dict[str, Any]] = []
     stats: list[dict[str, Any]] = []
 
-    for chunk in build_chunk_queries(source):
+    requested = [int(y) for y in source["years"]]
+    if dry_run:
+        years = requested
+    else:
+        years = []
+        for y in requested:
+            table = _table_for(source, y)
+            if year_available(client, table):
+                years.append(y)
+            else:
+                log.warning(
+                    "reporting year %d not published yet (%s does not exist in "
+                    "Discodata) — skipping", y, table
+                )
+                stats.append({"year": y, "pattern": "-", "rows": 0, "error": "table not published"})
+        if not years:
+            return [], stats
+
+    for chunk in build_chunk_queries(source, years):
         tag = f"{chunk['year']} / {chunk['pattern']}"
         if dry_run:
             log.info("[dry-run] %s\n    %s", tag, chunk["sql"])
@@ -103,11 +134,12 @@ def write_snapshot(rows: list[dict[str, Any]], source: dict[str, Any], stats: li
     ensure_dirs()
     stamp = datetime.now(timezone.utc)
     out = RAW_DIR / f"{RAW_PREFIX}_{stamp.strftime('%Y-%m-%d')}.json"
+    mined_years = sorted({int(r["_year"]) for r in rows if "_year" in r}) or source["years"]
     envelope = {
         "source": "eea_hdv_viewer",
         "access": source["access"],
         "fetched_at": stamp.isoformat(timespec="seconds"),
-        "years": source["years"],
+        "years": mined_years,
         "row_count": len(rows),
         "columns": source["columns"],
         "chunks": stats,
@@ -116,7 +148,7 @@ def write_snapshot(rows: list[dict[str, Any]], source: dict[str, Any], stats: li
     payload = json.dumps(envelope, ensure_ascii=False, indent=2).encode("utf-8")
     out.write_bytes(payload)
     sha = hashlib.sha256(payload).hexdigest()[:16]
-    prov = f"{out.name} | sha256:{sha} | {len(rows)} rows | years {source['years']} | fetched {envelope['fetched_at']}\n"
+    prov = f"{out.name} | sha256:{sha} | {len(rows)} rows | years {mined_years} | fetched {envelope['fetched_at']}\n"
     (RAW_DIR / f"{RAW_PREFIX}_{stamp.strftime('%Y-%m-%d')}.prov.txt").write_text(prov, encoding="utf-8")
     log.info("wrote %s (%d rows)", out, len(rows))
     log.info("provenance: %s", prov.strip())
@@ -148,7 +180,16 @@ def main(argv: list[str] | None = None) -> int:
         log.info("dry run: %d chunk queries built", len(stats))
         return 0
     if not rows:
-        log.error("no rows fetched — check table pattern / year availability")
+        unpublished = sorted({s["year"] for s in stats if s.get("error") == "table not published"})
+        if unpublished:
+            log.error(
+                "nothing to mine: reporting year(s) %s are not published by the EEA yet. "
+                "The HDV_<year>_viewer tables appear ~9-12 months after the period ends "
+                "(1 Jul - 30 Jun). Try a year already available (2023).",
+                unpublished,
+            )
+        else:
+            log.error("no rows fetched — check table pattern / manufacturer patterns")
         return 1
     write_snapshot(rows, source, stats)
     return 0
