@@ -547,31 +547,43 @@ with tab_bench:
 with tab_dist:
     num_cols = [c for c in dict.fromkeys([metric, *CORR_COLS])
                 if c in fdf and fdf[c].notna().sum() > 5]
-    split = st.checkbox("Split by manufacturer", value=False)
-    how_to_read(
-        "One chart per numeric field, stacked. Histogram = spread across the filtered "
-        "fleet; the split view is a per-OEM box (median line, IQR box) ordered by median. "
-        "Long right tails on power / displacement are the heavy long-haul tractors."
-    )
     _brand_order = [b for b in BRAND_ORDER if b in set(fdf["brand"])]
     _pt_order = [p for p in POWERTRAIN_CLASSES if p in set(fdf["powertrain_class"])]
-    for field in num_cols:
-        if split:
-            fig = px.box(fdf.dropna(subset=[field]), x="brand", y=field, color="brand",
-                         color_discrete_map=CMAP, points=False,
-                         category_orders={"brand": _brand_order})
-            show_legend = False
-        else:
+
+    d_overall, d_bybrand = st.tabs(["Overall", "By manufacturer"])
+
+    with d_overall:
+        how_to_read(
+            "One histogram per numeric field, stacked. Bar height = how many vehicles fall "
+            "in that value range; colour splits by powertrain class. Long right tails on "
+            "power / displacement are the heavy long-haul tractors."
+        )
+        for field in num_cols:
             fig = px.histogram(fdf.dropna(subset=[field]), x=field, nbins=60,
                                color="powertrain_class",
                                category_orders={"powertrain_class": _pt_order})
             fig.update_traces(marker_line_width=0)
-            show_legend = True
-        st.plotly_chart(
-            styled(fig, title=f"Distribution — {METRIC_LABELS.get(field, SHORT.get(field, field))}",
-                   showlegend=show_legend, height=340),
-            width="stretch",
+            st.plotly_chart(
+                styled(fig, title=f"{METRIC_LABELS.get(field, SHORT.get(field, field))}",
+                       showlegend=True, height=340),
+                width="stretch",
+            )
+
+    with d_bybrand:
+        how_to_read(
+            "One box per OEM per field: line = median, box = interquartile range, whiskers "
+            "= 1.5×IQR. Same OEM order (by fleet volume) on every chart, so a maker's "
+            "position is comparable across specs. `points=False` — groups are 20k–90k rows."
         )
+        for field in num_cols:
+            fig = px.box(fdf.dropna(subset=[field]), x="brand", y=field, color="brand",
+                         color_discrete_map=CMAP, points=False,
+                         category_orders={"brand": _brand_order})
+            st.plotly_chart(
+                styled(fig, title=f"{METRIC_LABELS.get(field, SHORT.get(field, field))}",
+                       showlegend=False, height=360),
+                width="stretch",
+            )
 
 # --------------------------------------------------------------------------- correlations
 with tab_corr:
